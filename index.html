@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>COR • Painel de Ocorrências</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<!-- SheetJS for client-side XLSX import -->
+<script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --bg:#0A121C;
+    --bg-grid: #0D1826;
+    --panel:#111E2E;
+    --panel-2:#0E1A28;
+    --border:#1C2E42;
+    --border-soft:#162434;
+    --text:#E7EDF5;
+    --muted:#7E8FA6;
+    --muted-2:#54637A;
+    --amber:#F2A93B;
+    --teal:#33C9B8;
+    --red:#E8636B;
+    --violet:#8E8CF0;
+    --blue:#4C8DF0;
+    --ok:#33C9B8;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);}
+  body{
+    font-family:'Inter',sans-serif;
+    background-image:
+      linear-gradient(var(--bg-grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--bg-grid) 1px, transparent 1px);
+    background-size: 42px 42px;
+    background-color: var(--bg);
+    min-height:100vh;
+  }
+  .mono{font-family:'IBM Plex Mono',monospace;}
+  .display{font-family:'Space Grotesk',sans-serif;}
+
+  header{
+    padding:22px 28px 18px;
+    display:flex;
+    align-items:flex-end;
+    justify-content:space-between;
+    border-bottom:1px solid var(--border);
+    flex-wrap:wrap;
+    gap:14px;
+  }
+  .brand{display:flex; align-items:center; gap:14px;}
+  .brand-mark{
+    width:40px;height:40px;border-radius:8px;
+    background:linear-gradient(135deg, var(--amber), #C97A1D);
+    display:flex;align-items:center;justify-content:center;
+    font-family:'Space Grotesk',sans-serif; font-weight:700; color:#0A121C; font-size:15px;
+    flex-shrink:0;
+  }
+  h1{font-family:'Space Grotesk',sans-serif; font-size:20px; margin:0; letter-spacing:0.2px;}
+  .subtitle{color:var(--muted); font-size:12.5px; margin-top:3px;}
+  .status{
+    display:flex; align-items:center; gap:8px;
+    font-family:'IBM Plex Mono',monospace; font-size:11.5px; color:var(--ok);
+    background:rgba(51,201,184,0.08); border:1px solid rgba(51,201,184,0.3);
+    padding:6px 12px; border-radius:20px;
+  }
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--ok); box-shadow:0 0 0 3px rgba(51,201,184,0.2); animation: pulse 2s infinite;}
+  @keyframes pulse{0%,100%{opacity:1;} 50%{opacity:0.4;}}
+
+  .wrap{padding:20px 28px 40px; max-width:1440px; margin:0 auto;}
+
+  .kpis{
+    display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:18px;
+  }
+  .kpi{
+    background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:16px 18px;
+    position:relative; overflow:hidden;
+  }
+  .kpi::before{
+    content:''; position:absolute; top:0; left:0; width:3px; height:100%;
+    background:var(--kpi-accent, var(--amber));
+  }
+  .kpi-label{font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:0.6px;}
+  .kpi-value{font-family:'Space Grotesk',sans-serif; font-size:28px; font-weight:700; margin-top:6px;}
+  .kpi-sub{font-size:11.5px; color:var(--muted-2); margin-top:4px; font-family:'IBM Plex Mono',monospace;}
+
+  .panel-title{
+    font-family:'Space Grotesk',sans-serif; font-size:13.5px; font-weight:600;
+    color:var(--text); display:flex; align-items:center; justify-content:space-between;
+    margin-bottom:12px;
+  }
+  .panel-title .tag{font-size:10.5px; color:var(--muted); font-weight:400; font-family:'IBM Plex Mono',monospace;}
+
+  .grid-main{
+    display:grid; grid-template-columns: 340px 1fr; gap:16px; margin-bottom:16px;
+  }
+  .panel{
+    background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:16px 18px;
+  }
+
+  /* zone selector - signature element */
+  .zonemap{
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr 1fr;
+    gap:6px;
+    height:230px;
+    margin-bottom: 14px;
+  }
+  .zcell{
+    border-radius:8px; border:1px solid var(--border-soft);
+    display:flex; flex-direction:column; justify-content:flex-end; padding:10px;
+    cursor:pointer; position:relative; overflow:hidden;
+    transition: transform .15s ease, border-color .15s ease;
+    background:var(--panel-2);
+  }
+  .zcell:hover{ transform: translateY(-2px); }
+  .zcell .zname{font-size:11.5px; font-weight:600; font-family:'Space Grotesk',sans-serif;}
+  .zcell .zcount{font-family:'IBM Plex Mono',monospace; font-size:20px; font-weight:600; margin-top:2px;}
+  .zcell .zbar{position:absolute; bottom:0; left:0; height:4px; background:var(--zc,var(--amber)); opacity:.85;}
+  .zcell.active{ border-color: var(--zc, var(--amber)); box-shadow: 0 0 0 1px var(--zc, var(--amber)) inset; }
+  .zcell.dim{ opacity:0.35; }
+  #z-norte{grid-column:1/2; grid-row:1/2;}
+  #z-oeste{grid-column:1/2; grid-row:2/4;}
+  #z-centro{grid-column:2/3; grid-row:1/2;}
+  #z-sul{grid-column:2/3; grid-row:2/4;}
+
+  .chip-row{display:flex; flex-wrap:wrap; gap:6px;}
+  .chip{
+    font-size:11.5px; padding:5px 10px; border-radius:14px; border:1px solid var(--border);
+    color:var(--muted); cursor:pointer; user-select:none; background:var(--panel-2);
+    transition: all .12s ease;
+  }
+  .chip:hover{color:var(--text); border-color:var(--muted-2);}
+  .chip.active{ background:var(--amber); color:#1a1206; border-color:var(--amber); font-weight:600;}
+  .chip-clear{color:var(--red); font-family:'IBM Plex Mono',monospace;}
+
+  .charts-grid{
+    display:grid; grid-template-columns: 1.3fr 1fr; gap:16px; margin-bottom:16px;
+  }
+  .charts-grid .row2{ display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:16px;}
+  canvas{max-width:100%;}
+
+  table{width:100%; border-collapse:collapse; font-size:12px;}
+  thead th{
+    text-align:left; padding:8px 10px; color:var(--muted); font-weight:600;
+    border-bottom:1px solid var(--border); position:sticky; top:0; background:var(--panel);
+    font-size:10.5px; text-transform:uppercase; letter-spacing:0.4px;
+  }
+  tbody td{padding:7px 10px; border-bottom:1px solid var(--border-soft); vertical-align:top;}
+  tbody tr:hover{background:var(--panel-2);}
+  .log-wrap{max-height:340px; overflow-y:auto; border:1px solid var(--border); border-radius:8px;}
+  .badge{
+    display:inline-block; padding:2px 8px; border-radius:10px; font-size:10.5px;
+    font-family:'IBM Plex Mono',monospace; white-space:nowrap;
+  }
+  .empty-state{ text-align:center; padding:40px 20px; color:var(--muted); font-size:13px;}
+
+  footer{ text-align:center; color:var(--muted-2); font-size:11px; padding:18px 0 6px; font-family:'IBM Plex Mono',monospace;}
+
+  @media (max-width: 900px){
+    .grid-main{grid-template-columns:1fr;}
+    .charts-grid{grid-template-columns:1fr;}
+    .charts-grid .row2{grid-template-columns:1fr;}
+    .kpis{grid-template-columns:1fr 1fr;}
+  }
+
+  ::-webkit-scrollbar{width:8px; height:8px;}
+  ::-webkit-scrollbar-thumb{background:var(--border); border-radius:4px;}
+  ::-webkit-scrollbar-track{background:transparent;}
+
+  button.reset-btn{
+    background:transparent; border:1px solid var(--border); color:var(--muted);
+    font-family:'IBM Plex Mono',monospace; font-size:11px; padding:6px 12px; border-radius:6px;
+    cursor:pointer;
+  }
+  button.reset-btn:hover{ color:var(--text); border-color:var(--muted-2); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <div class="brand-mark">COR</div>
+    <div>
+      <h1>Painel de Ocorrências — Centro de Operações</h1>
+      <div class="subtitle">Monitoramento apurado pela equipe do COR · maio a julho/2026</div>
+    </div>
+  </div>
+  <div class="status"><span class="dot"></span> DADOS CARREGADOS</div>
+  <div style="display:flex;align-items:center;gap:10px;">
+    <input id="xlsx-input" type="file" accept=".xlsx,.xls" multiple style="display:none">
+    <button class="reset-btn" id="import-btn">Importar XLSX</button>
+    <span id="import-status" style="color:var(--muted); font-size:12px;">arraste/solte ou clique para carregar</span>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <div class="kpis" id="kpis"></div>
+
+  <div class="grid-main">
+    <div class="panel">
+      <div class="panel-title">Zona da cidade <span class="tag">clique para filtrar</span></div>
+      <div class="zonemap" id="zonemap"></div>
+      <div class="panel-title" style="margin-top:6px;">Tipo de ocorrência</div>
+      <div class="chip-row" id="cat-chips"></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">
+        Filtros ativos
+        <button class="reset-btn" id="reset-btn">limpar filtros ↺</button>
+      </div>
+      <div class="chip-row" id="active-filters" style="margin-bottom:14px;"></div>
+      <div class="panel-title">Equipe em campo</div>
+      <div class="chip-row" id="equipe-chips"></div>
+    </div>
+  </div>
+
+  <div class="charts-grid">
+    <div class="panel">
+      <div class="panel-title">Ocorrências por tipo <span class="tag" id="tag-tipo"></span></div>
+      <canvas id="chart-tipo" height="230"></canvas>
+    </div>
+    <div class="panel">
+      <div class="panel-title">Distribuição por zona <span class="tag" id="tag-zona"></span></div>
+      <canvas id="chart-zona" height="230"></canvas>
+    </div>
+    <div class="row2">
+      <div class="panel">
+        <div class="panel-title">Evolução diária <span class="tag">jul/2026</span></div>
+        <canvas id="chart-dia" height="200"></canvas>
+      </div>
+      <div class="panel">
+        <div class="panel-title">Ocorrências por equipe</div>
+        <canvas id="chart-equipe" height="200"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">Registro de ocorrências <span class="tag" id="tag-log"></span></div>
+    <div class="log-wrap">
+      <table>
+        <thead><tr><th style="width:40px;">Qte</th><th style="width:70px;">Data</th><th>Ocorrência</th><th style="width:110px;">Zona</th><th>Endereço</th><th style="width:150px;">Equipe</th></tr></thead>
+        <tbody id="log-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <footer>COR · painel gerado a partir da planilha de monitoramento · dados internos</footer>
+</div>
+
+<script>
+function normalizeCategory(value) {
+  const v = (value || '').toLowerCase();
+  if (v.includes('acidente') || v.includes('ac 2') || v.includes('ac ') || v.includes('capot') || v.includes('tomb')) return 'Acidente de trânsito';
+  if (v.includes('enguiço')) return 'Enguiço de veículo';
+  if (v.includes('operação') || v.includes('pmerj')) return 'Operação Policial';
+  if (v.includes('atropel')) return 'Atropelamento';
+  if (v.includes('manut') || v.includes('buraco') || v.includes('água') || v.includes('bols')) return 'Manutenção na via';
+  if (v.includes('queda') || v.includes('risco de queda')) return 'Queda de moto/veículo';
+  if (v.includes('incêndio') || v.includes('incendio')) return 'Incêndio';
+  if (v.includes('manifest')) return 'Evento Religioso';
+  return value || 'Ocorrência';
+}
+
+function inferZone(address) {
+  const txt = (address || '').toUpperCase();
+  if (/LAGOA|GÁVEA|LEBLON|IPANEMA|COPACABANA|BOTAFOGO/i.test(txt)) return 'Zona Sul';
+  if (/BARRA|JACAREPAGUÁ|RECREIO|GUARATIBA|SANTA CRUZ|SÃO CONRADO|ILHA|JPA|VILA MILITAR|VILA|MARÉ|PENHA/i.test(txt)) return 'Zona Oeste';
+  if (/CENTRO|TIJUCA|MARACANÃ|SANTO CRISTO|CAJU|BENFICA|BONSUCESSO|OLARIA|MÉIER|RIO COMPRIDO|VARNHAGEN|FREYSSINET|CASCADURA|MADUREIRA|DEL CASTILHO|CORDOVIL|MARIA DA GRAÇA|SÃO CRISTÓVÃO|SANTO CRISTO|JARDIM/i.test(txt)) return 'Centro';
+  return 'Zona Norte';
+}
+
+const RAW_DATA = [
+  { Data: '2026-05-01', Data_str: '01-mai', Categoria: 'Operação Policial', Equipe: 'Vinícius/Diego/Marcio', Endereço: 'Rua São Francisco Xavier x Rua Mariz e Barros', 'Agência Validadora': 'TIXXI' },
+  { Data: '2026-05-02', Data_str: '02-mai', Categoria: 'AC 2 VP', Equipe: 'Maggessi / Hugo / Carlos', Endereço: 'Autoestrada Grajaú-Jacarepaguá - Alt. Km 6,5 - Sent. JPA - Jacarepaguá', 'Agência Validadora': 'CET-RIO' },
+  { Data: '2026-05-03', Data_str: '03-mai', Categoria: 'Enguiço VP', Equipe: 'Maggessi / Hugo / Carlos', Endereço: 'Avenida Ayrton Senna - Alt. Hospital Municipal Lourenço Jorge - Sent. Orla - Barra', 'Agência Validadora': 'CET-RIO' },
+  { Data: '2026-05-04', Data_str: '04-mai', Categoria: 'Manutenção na via', Equipe: 'Maggessi / Hugo / Carlos', Endereço: 'Avenida Brasil - Alt. Viaduto da Ilha - Sent. Z. Oeste - Maré', 'Agência Validadora': 'CET-RIO' },
+  { Data: '2026-05-05', Data_str: '05-mai', Categoria: 'Buraco na via', Equipe: 'Maggessi / Hugo / Carlos', Endereço: 'Avenida Armando Lombardi - Alt. Metrô Jardim Oceânico - Sent. São Conrado - Barra da Tijuca', 'Agência Validadora': 'SECONSERVA' },
+  { Data: '2026-05-06', Data_str: '06-mai', Categoria: 'AC VP x MT', Equipe: 'Maggessi / Hugo / Carlos / Felipe', Endereço: 'Linha Vermelha - Alt. Km 8 - Sent. Baixada - Cidade Universitária', 'Agência Validadora': 'CET-RIO' },
+  { Data: '2026-05-08', Data_str: '08-mai', Categoria: 'AC 2 MT', Equipe: 'Alex / Diego / Vinicius / Felipe', Endereço: 'Avenida Monsenhor Félix - Alt. R. Pereira de Araújo - Irajá', 'Agência Validadora': 'Operador CICC' },
+  { Data: '2026-05-10', Data_str: '10-mai', Categoria: 'Enguiço VP', Equipe: 'Alex / Diego / Vinicius / Felipe', Endereço: 'Avenida Armando Lombardi - Alt. Ponte Estaiada do Metrô - Sent. Recreio - Barra da Tijuca', 'Agência Validadora': 'CET-RIO' },
+  { Data: '2026-05-12', Data_str: '12-mai', Categoria: 'Operação Policial', Equipe: 'Ricardo / Matheus / Felipe', Endereço: 'Avenida Ayrton Senna - Alt. Ponte Santos Dumont - Sent. Linha Amarela - Barra da Tijuca', 'Agência Validadora': 'TIXXI' },
+  { Data: '2026-06-01', Data_str: '01-jun', Categoria: 'AC 2 VP', Equipe: 'Daniel / Leonardo / Jackson', Endereço: 'Rua Teixeira Soares - Alt. Nº139 - Sent. Centro - Maracanã', 'Agência Validadora': 'CET-RIO' },
+  { Data: '2026-06-02', Data_str: '02-jun', Categoria: 'AC VP x MT', Equipe: 'Daniel / Leonardo / Jackson', Endereço: 'Linha Amarela - Alt. Saída 05 - Sent. Barra - Del Castilho', 'Agência Validadora': 'LAMSA' },
+  { Data: '2026-06-03', Data_str: '03-jun', Categoria: 'Poste com risco de queda', Equipe: 'Daniel / Leonardo / Jackson', Endereço: 'Rua São Luiz Gonzaga - Alt. R. Capitão Félix - Sent. Maria da Graça - Benfica', 'Agência Validadora': 'RIO ONIBUS' },
+  { Data: '2026-06-05', Data_str: '05-jun', Categoria: 'Enguiço CM', Equipe: 'Daniel / Leonardo / Jackson', Endereço: 'Rua São Luiz Gonzaga - Alt. R. Ana Neri - Sent. Maria da Graça - Benfica', 'Agência Validadora': 'DRONE' },
+  { Data: '2026-06-08', Data_str: '08-jun', Categoria: 'Atropelamento MT', Equipe: 'Daniel / Leonardo / Jackson', Endereço: 'Avenida Borges de Medeiros - Alt. Rua José Joaquim Seabra - Sent. Túnel Rebouças - Lagoa', 'Agência Validadora': 'CBMERJ' },
+  { Data: '2026-06-10', Data_str: '10-jun', Categoria: 'Operação Policial', Equipe: 'Ricardo / Matheus / Felipe', Endereço: 'Avenida Ayrton Senna - Alt. Ponte Santos Dumont - Sent. Linha Amarela - Barra da Tijuca', 'Agência Validadora': 'TIXXI' },
+  { Data: '2026-06-12', Data_str: '12-jun', Categoria: 'Enguiço VP', Equipe: 'Ricardo / Matheus / Felipe', Endereço: 'Rua General Luís Mendes de Morais - Alt. Praça Dinah Silveira de Queirós - Sent. São Cristóvão - Santo Cristo', 'Agência Validadora': 'TIXXI' },
+  { Data: '2026-06-15', Data_str: '15-jun', Categoria: 'Manutenção na via', Equipe: 'Ricardo / Matheus / Felipe', Endereço: 'Rua Muniz Barreto - Alt. R. Marques de Olinda - Botafogo', 'Agência Validadora': 'TIXXI' },
+  { Data: '2026-07-01', Data_str: '01-jul', Categoria: 'Enguiço de veículo', Equipe: 'Ricardo / Diego / Felipe', Endereço: 'Linha Vermelha - Alt. Km 13 - Sent. Baixada - Cordovil', 'Agência Validadora': 'CET-RIO' },
+  { Data: '2026-07-02', Data_str: '02-jul', Categoria: 'Operação Policial', Equipe: 'Ricardo / Diego / Felipe', Endereço: 'Avenida Embaixador Abelardo Bueno - Alt. Terminal Centro Olímpico - Sent. Linha Amarela - Barra da Tijuca', 'Agência Validadora': 'CET-RIO' },
+  { Data: '2026-07-03', Data_str: '03-jul', Categoria: 'Acidente de trânsito', Equipe: 'Matheus / Jackson / Ricardo', Endereço: 'Av. Prof. Manoel de Abreu - Alt. R. Maxwell - Sent. Praça da Bandeira - Maracanã', 'Agência Validadora': 'TIXXI' },
+  { Data: '2026-07-04', Data_str: '04-jul', Categoria: 'Operação Policial', Equipe: 'Matheus / Jackson / Ricardo', Endereço: 'Av. Ayrton Senna - Alt. Nº 3419 - Sent. Orla - Barra da Tijuca', 'Agência Validadora': 'TIXXI' },
+  { Data: '2026-07-06', Data_str: '06-jul', Categoria: 'Enguiço de veículo', Equipe: 'Matheus / Jackson / Ricardo', Endereço: 'Av. Borges de Medeiros - Alt. R. Batista da Costa - Sent. Túnel Rebouças - Lagoa', 'Agência Validadora': 'TIXXI' },
+  { Data: '2026-07-08', Data_str: '08-jul', Categoria: 'Atropelamento', Equipe: 'Matheus / Jackson / Vinícius', Endereço: 'Av. Lúcio Costa - Alt. Ilha 5 - Sent. Recreio dos Bandeirantes - Barra da Tijuca', 'Agência Validadora': 'CICC' },
+  { Data: '2026-07-10', Data_str: '10-jul', Categoria: 'Acidente de trânsito', Equipe: 'Vinícius / Diego / Felipe', Endereço: 'Linha Vermelha - Alt. Km 10 - Sent. Centro - Galeão', 'Agência Validadora': 'TIXXI' },
+  { Data: '2026-07-12', Data_str: '12-jul', Categoria: 'Operação Policial', Equipe: 'Ricardo / Matheus / Felipe', Endereço: 'Avenida Brasil - Alt. Passarela 14 - Sent. Centro - Olaria', 'Agência Validadora': 'CET-RIO' },
+  { Data: '2026-07-14', Data_str: '14-jul', Categoria: 'Manutenção na via', Equipe: 'Ricardo / Matheus / Felipe', Endereço: 'Avenida Brasil - Alt. Passarela 35 - Ambos sentidos - Guadalupe', 'Agência Validadora': 'TIXXI' },
+  { Data: '2026-07-15', Data_str: '15-jul', Categoria: 'Queda de moto/veículo', Equipe: 'Daniel / Leonardo / Jackson', Endereço: 'Rua São Luiz Gonzaga - Alt. R. Capitão Félix - Sent. Maria da Graça - Benfica', 'Agência Validadora': 'RIO ONIBUS' },
+].map((item, index) => ({
+  QTE: index + 1,
+  Dia: new Date(`${item.Data}T00:00:00`).getDate(),
+  Data: item.Data,
+  Data_str: item.Data_str,
+  Categoria: normalizeCategory(item.Categoria),
+  Equipe: item.Equipe,
+  Endereço: item.Endereço,
+  'Agência Validadora': item['Agência Validadora'],
+  Zona: inferZone(item.Endereço)
+}));
+/*{"QTE": 2.0, "Dia": 1, "Data_str": "1-jul.", "Categoria": "Enguiço de veículo", "Zona": "Zona Norte", "Equipe": "Ricardo / Diego / Felipe", "Endereço": "LINHA VERMELHA - ALT. KM 13 - SENT. BAIXADA - CORDOVIL", "Agência Validadora": "CET-RIO"}, {"QTE": 3.0, "Dia": 1, "Data_str": "1-jul.", "Categoria": "Operação Policial", "Zona": "Zona Oeste", "Equipe": "Ricardo / Diego / Felipe", "Endereço": "AVENIDA EMBAIXADOR ABELARDO BUENO - ALT. TERMINAL CENTRO OLÍMPICO - SENT. LINHA AMARELA - BARRA DA TIJUCA", "Agência Validadora": "CET-RIO"}, {"QTE": 4.0, "Dia": 1, "Data_str": "1-jul.", "Categoria": "Operação Policial", "Zona": "Zona Oeste", "Equipe": "Ricardo / Diego / Felipe", "Endereço": "AVENIDA AYRTON SENNA - ALT. PONTE SANTOS DUMONT - SENT. ORLA - JACAREPAGUÁ", "Agência Validadora": "Tixxi"}, {"QTE": 5.0, "Dia": 2, "Data_str": "2-jul.", "Categoria": "Acidente de trânsito", "Zona": "Zona Norte", "Equipe": "Matheus / Jackson / Ricardo", "Endereço": "Av. Prof. Manoel de Abreu - Alt. R. Maxwell - Sent; Praça da Bandeira - Maracanã", "Agência Validadora": "TIXXI"}, {"QTE": 6.0, "Dia": 2, "Data_str": "2-jul.", "Categoria": "Operação Policial", "Zona": "Zona Oeste", "Equipe": "Matheus / Jackson / Ricardo", "Endereço": "Av. Ayrton Senna - Alt. Nº 3419 - Sent. Orla - Barra da Tijuca", "Agência Validadora": "TIXXI"}, {"QTE": 7.0, "Dia": 2, "Data_str": "2-jul.", "Categoria": "Operação Policial", "Zona": "Zona Oeste", "Equipe": "Matheus / Jackson / Ricardo", "Endereço": "Av. das Américas - Alt. Est. BRT Riomar - Sent. Recreio dos Bandeirantes - Barra da Tijuca", "Agência Validadora": "TIXXI"}, {"QTE": 8.0, "Dia": 3, "Data_str": "3-jul.", "Categoria": "Enguiço de veículo", "Zona": "Zona Sul", "Equipe": "Matheus / Jackson / Ricardo", "Endereço": "Av. Borges de Medeiros - Alt. R. Batista da Costa - Sent. Túnel Rebouças - Lagoa", "Agência Validadora": "TIXXI"}, {"QTE": 9.0, "Dia": 4, "Data_str": "4-jul.", "Categoria": "Acidente de trânsito", "Zona": "Zona Oeste", "Equipe": "Matheus / Jackson / Vinícius", "Endereço": "Av. Lúcio Costa - Alt. Ilha 5 - Sent. Recreio dos Bandeirantes - Barra da Tijuca", "Agência Validadora": "CICC"}, {"QTE": 10.0, "Dia": 4, "Data_str": "4-jul.", "Categoria": "Enguiço de veículo", "Zona": "Zona Norte", "Equipe": "Vinícius / Diego / Felipe", "Endereço": "LINHA VERMELHA - ALT. KM 10 - SENT. CENTRO - GALEÃO", "Agência Validadora": "CET-RIO"}, {"QTE": 11.0, "Dia": 4, "Data_str": "4-jul.", "Categoria": "Atropelamento", "Zona": "Zona Norte", "Equipe": "Vinícius / Diego / Felipe", "Endereço": "AVENIDA MERITI - ALT. AV. SÃO FÉLIX - SENT. VILA DA PENHA - VISTA ALEGRE", "Agência Validadora": "Tixxi"}, {"QTE": 12.0, "Dia": 4, "Data_str": "4-jul.", "Categoria": "Manutenção na via", "Zona": "Zona Norte", "Equipe": "Vinícius / Diego / Felipe", "Endereço": "AVENIDA BRIGADEIRO TROMPOWSKI - DEBAIXO DA LINHA VERMELHA - SENT. FUNDÃO - CIDADE UNIVERSITÁRIA", "Agência Validadora": "TIxxi"}, {"QTE": 13.0, "Dia": 4, "Data_str": "4-jul.", "Categoria": "Enguiço de veículo", "Zona": "Zona Norte", "Equipe": "Vinícius / Diego / Felipe", "Endereço": "LINHA VERMELHA - ALT. KM 8 - SENT. BAIXADA - GALEÃO", "Agência Validadora": "CET-RIO"}, {"QTE": 14.0, "Dia": 4, "Data_str": "4-jul.", "Categoria": "Operação Policial", "Zona": "Zona Norte", "Equipe": "Vinícius / Diego / Felipe", "Endereço": "LINHA VERMELHA - ALT. KM 3 - SENT. BAIXADA - CAJU", "Agência Validadora": "TIxxi"}, {"QTE": 15.0, "Dia": 4, "Data_str": "4-jul.", "Categoria": "Manutenção na via", "Zona": "Zona Norte", "Equipe": "Vinícius / Diego / Felipe", "Endereço": "ELEVADO ENGENHEIRO FREYSSINET - SENT. CENTRO - RIO COMPRIDO", "Agência Validadora": "CET-RIO"}, {"QTE": 16.0, "Dia": 4, "Data_str": "4-jul.", "Categoria": "Acidente de trânsito", "Zona": "Zona Oeste", "Equipe": "Vinícius / Diego / Felipe", "Endereço": "RUA FELIPE CARDOSO - ALT. R. GEN. OLÍMPIO - SENT. AV. BRASIL - SANTA CRUZ", "Agência Validadora": "CICC"}, {"QTE": 17.0, "Dia": 5, "Data_str": "5-jul.", "Categoria": "Acidente de trânsito", "Zona": "Zona Oeste", "Equipe": "Ricardo / Diego / Felipe", "Endereço": "AVENIDA CESÁRIO DE MELO - ALT. EST. BRT SÃO JORGE - SENT. CAMPO GRANDE - INHOAÍBA", "Agência Validadora": "Tixxi"}, {"QTE": 18.0, "Dia": 5, "Data_str": "5-jul.", "Categoria": "Operação Policial", "Zona": "Centro", "Equipe": "Ricardo / Diego / Felipe", "Endereço": "LINHA VERMELHA - ALT. KM 3 - SENT. CENTRO - CAJU", "Agência Validadora": "Tixxi"}, {"QTE": 19.0, "Dia": 5, "Data_str": "5-jul.", "Categoria": "Acidente de trânsito", "Zona": "Zona Norte", "Equipe": "Ricardo / Diego / Felipe", "Endereço": "AVENIDA MARACANÃ - CRUZAMENTO COM RUA MATA MACHADO - SENT. CENTRO - MARACANÃ", "Agência Validadora": "Tixxi"}, {"QTE": 20.0, "Dia": 5, "Data_str": "5-jul.", "Categoria": "Operação Policial", "Zona": "Zona Oeste", "Equipe": "Ricardo / Diego / Felipe", "Endereço": "AVENIDA MINISTRO IVAN LINS - ALT. RUA DEODATO DE MORAES - SENT. RECREIO DOS BANDEIRANTES - BARRA DA TIJUCA", "Agência Validadora": "Tixxi"}, {"QTE": 21.0, "Dia": 5, "Data_str": "5-jul.", "Categoria": "Enguiço de veículo", "Zona": "Zona Norte", "Equipe": "Ricardo / Diego / Felipe", "Endereço": "AVENIDA BRASIL - ALT. PASSARELA 2 SENT. CENTRO - VASCO DA GAMA", "Agência Validadora": "CET-RIO"}, {"QTE": 22.0, "Dia": 5, "Data_str": "5-jul.", "Categoria": "Operação Policial", "Zona": "Zona Norte", "Equipe": "Ricardo / Diego / Felipe", "Endereço": "ELEVADO ENGENHEIRO FREYSSINET - SENT. LAGOA - RIO COMPRIDO", "Agência Validadora": "Tixxi"}, {"QTE": 23.0, "Dia": 6, "Data_str": "6-jul.", "Categoria": "Incêndio", "Zona": "Zona Norte", "Equipe": "Ricardo / Diego / Felipe", "Endereço": "AVENIDA BRASIL - ALT. R. PREF. OLÍMPIO DE MELO - SENT. CENTRO - BENFICA", "Agência Validadora": "Tixxi"}, {"QTE": 24.0, "Dia": 6, "Data_str": "6-jul.", "Categoria": "Acidente de trânsito", "Zona": "Zona Norte", "Equipe": "Matheus / Jackson / Ricardo", "Endereço": "R. Prefeito Olímpio de Melo - Benfica - Alt. R. Sen. Bernardo", "Agência Validadora": "TIXXI"}, {"QTE": 25.0, "Dia": 6, "Data_str": "6-jul.", "Categoria": "Queda de moto/veículo", "Zona": "Zona Norte", "Equipe": "Matheus / Jackson / Ricardo", "Endereço": "Av. Brasil - Alt. Av. Portuária - Sent. Z. Oeste - Manguinhos", "Agência Validadora": "TIXXI"}, {"QTE": 26.0, "Dia": 7, "Data_str": "7-jul.", "Categoria": "Enguiço de veículo", "Zona": "Zona Oeste", "Equipe": "Matheus / Jackson / Vinícius", "Endereço": "Av. Salvador Allende - Alt. Est. BRT Olof Palme - Barra Olímpica - Sent. Curicica", "Agência Validadora": "TIXXI"}, {"QTE": 27.0, "Dia": 7, "Data_str": "7-jul.", "Categoria": "Enguiço de veículo", "Zona": "Zona Oeste", "Equipe": "Matheus / Jackson / Vinícius", "Endereço": "Av. das Américas - Alt. Est. BRT Américas Park - Sent. Recreio dos Bandeirantes - Barra da TIjuca", "Agência Validadora": "TIXXI"}, {"QTE": 28.0, "Dia": 7, "Data_str": "7-jul.", "Categoria": "Operação Policial", "Zona": "Zona Oeste", "Equipe": "Matheus / Jackson / Vinícius", "Endereço": "Av. Ayrton Senna - Alt. Nº 3419 - Sent. Orla - Barra da Tijuca", "Agência Validadora": "TIXXI"}, {"QTE": 29.0, "Dia": 8, "Data_str": "8-jul.", "Categoria": "Acidente de trânsito", "Zona": "Zona Norte", "Equipe": "Jackson / Matheus / Vinícius", "Endereço": "Av. Brasil - Alt. Est. BRT Benfica - Sent. Centro - Maré", "Agência Validadora": "TIXXI"}, {"QTE": 30.0, "Dia": 8, "Data_str": "8-jul.", "Categoria": "Enguiço de veículo", "Zona": "Zona Sul", "Equipe": "Maggessi / Leonardo / Hugo", "Endereço": "TÚNEL ANDRÉ REBOUÇAS - 1ª GALERIA - SENT. CENTRO - COSME VELHO", "Agência Validadora": "TIXXI"}, {"QTE": 31.0, "Dia": 8, "Data_str": "8-jul.", "Categoria": "Acidente de trânsito", "Zona": "Zona Oeste", "Equipe": "Maggessi / Leonardo / Hugo", "Endereço": "AVENIDA LÚCIO COSTA - ALT. POSTO 07 - SENT. SÃO CONRADO - BARRA DA TIJUCA", "Agência Validadora": "CBMERJ"}, {"QTE": 32.0, "Dia": 8, "Data_str": "8-jul.", "Categoria": "Manutenção na via", "Zona": "Zona Oeste", "Equipe": "Maggessi / Leonardo / Hugo", "Endereço": "AVENIDA SALVADOR ALLENDE - ALT. EST. BRT ASA BRANCA - SENT. RECREIO - JACAREPAGUÁ", "Agência Validadora": "TIXXI"}, {"QTE": 33.0, "Dia": 8, "Data_str": "8-jul.", "Categoria": "Acidente de trânsito", "Zona": "Zona Oeste", "Equipe": "Maggessi / Leonardo / Hugo", "Endereço": "RUA CÂNDIDO BENÍCIO - ALT. R. PINTO TELES - SENT. TAQUARA - PRAÇA SECA", "Agência Validadora": "TIXXI"}, {"QTE": 34.0, "Dia": 8, "Data_str": "8-jul.", "Categoria": "Enguiço de veículo", "Zona": "Zona Norte", "Equipe": "Maggessi / Leonardo / Hugo", "Endereço": "AVENIDA BRASIL - ALT. PASSARELA 20 - SENT. CENTRO - PARADA DE LUCAS", "Agência Validadora": "TIXXI"}, {"QTE": 35.0, "Dia": 8, "Data_str": "8-jul.", "Categoria": "Queda de moto/veículo", "Zona": "Zona Norte", "Equipe": "Maggessi / Leonardo / Hugo", "Endereço": "AVENIDA BRASIL - ALT. EST. BRT VASCO DA GAMA - SENT. Z. OESTE - SÃO CRISTÓVÃO", "Agência Validadora": "TIXXI"}, {"QTE": 36.0, "Dia": 9, "Data_str": "9-jul.", "Categoria": "Acidente de trânsito", "Zona": "Zona Norte", "Equipe": "Ricardo / Diego / Felipe", "Endereço": "AVENIDA BRASIL - ALT. PASSARELA 13 - SENT Z. OESTE. - MARÉ", "Agência Validadora": "CET-RIO"}, {"QTE": 37.0, "Dia": 9, "Data_str": "9-jul.", "Categoria": "Acidente de trânsito", "Zona": "Zona Norte", "Equipe": "Ricardo / Diego / Felipe", "Endereço": "AVENIDA BRASIL - ALT. ACESSO PONTE RIO NITERÓI - SENT. NITERÓI - SÃO CRISTÓVÃO", "Agência Validadora": "ECOPONTE"}, {"QTE": 38.0, "Dia": 9, "Data_str": "9-jul.", "Categoria": "Acidente de trânsito", "Zona": "Zona Norte", "Equipe": "Ricardo / Diego / Felipe", "Endereço": "AVENIDA BRASIL - ALT. EST. BRT BENFICA - SENT. BAIXADA - BENFICA", "Agência Validadora": "CET-RIO"}, {"QTE": 39.0, "Dia": 9, "Data_str": "9-jul.", "Categoria": "Operação Policial", "Zona": "Zona Oeste", "Equipe": "Ricardo / Diego / Felipe", "Endereço": "AVENIDA AYRTON SENNA - ALT. PONTE SANTOS DUMONT - SENT. ORLA - BARRA DA TIJUCA", "Agência Validadora": "Tixxi"}, {"QTE": 40.0, "Dia": 9, "Data_str": "9-jul.", "Categoria": "Operação Policial", "Zona": "Zona Sul", "Equipe": "Ricardo / Diego / Felipe", "Endereço": "RUA DUVIVIER - COPACABANA", "Agência Validadora": "Tixxi"}, {"QTE": 41.0, "Dia": 9, "Data_str": "9-jul.", "Categoria": "Enguiço de veículo", "Zona": "Zona Oeste", "Equipe": "Ricardo / Diego / Felipe", "Endereço": "AVENIDA AYRTON SENNA - ALT. EST. BRT AEROPORTO DE JACAREPAGUÁ - SENT. LINHA AMARELA - BARRA DA TIJUCA", "Agência Validadora": "CET-RIO"}, {"QTE": 42.0, "Dia": 9, "Data_str": "9-jul.", "Categoria": "Manutenção na via", "Zona": "Zona Sul", "Equipe": "Ricardo / Diego / Felipe", "Endereço": "AVENIDA TRINTA E UM DE MARÇO - SENT. LARANJEIRAS - CATUMBI", "Agência Validadora": "Tixxi"}, {"QTE": 43.0, "Dia": 10, "Data_str": "10-jul.", "Categoria": "Acidente de trânsito", "Zona": "Zona Oeste", "Equipe": "Hugo - Vitor - Maggessi", "Endereço": "AVENIDA DAS AMÉRICAS - ALT. N° 11889 - SENT. RECREIO - BARRA DA TIJUCA", "Agência Validadora": "CBMERJ"}, {"QTE": 44.0, "Dia": 10, "Data_str": "10-jul.", "Categoria": "Incêndio", "Zona": "Zona Sul", "Equipe": "Hugo - Vitor - Maggessi", "Endereço": "LARGO DOS LEÕES - ALT. Nº 40 - HUMAITÁ", "Agência Validadora": "CBMERJ"}, {"QTE": 45.0, "Dia": 10, "Data_str": "10-jul.", "Categoria": "Enguiço de veículo", "Zona": "Zona Oeste", "Equipe": "Hugo - Vitor - Maggessi", "Endereço": "TÚNEL ACÚSTICO RAFAEL MASCARENHAS", "Agência Validadora": "CET-RIO"}, {"QTE": 46.0, "Dia": 10, "Data_str": "10-jul.", "Categoria": "Acidente de trânsito", "Zona": "Zona Oeste", "Equipe": "Hugo - Vitor - Maggessi", "Endereço": "AVENIDA AYRTON SENNA - ALT. DESCIDA DA LINHA AMARELA - SENT. ORLA - CIDADE DE DEUS", "Agência Validadora": "LAMSA - CET-RIO"}, {"QTE": 47.0, "Dia": 10, "Data_str": "10-jul.", "Categoria": "Acidente de trânsito", "Zona": "Centro", "Equipe": "Hugo - Vitor - Maggessi", "Endereço": "AVENIDA PRESIDENTE VARGAS - ALT. PÇA DA REPÚBLICA - SENT. CANDELÁRIA - CENTRO", "Agência Validadora": "CBMERJ"}, {"QTE": 48.0, "Dia": 10, "Data_str": "10-jul.", "Categoria": "Enguiço de veículo", "Zona": "Centro", "Equipe": "Hugo - Vitor - Maggessi", "Endereço": "AVENIDA FRANCISCO BICALHO - ALT. TREVO DAS FORÇAS ARMADAS - SENT. AV. BRASIL - SANTO CRISTO", "Agência Validadora": "CET-RIO"}, {"QTE": 49.0, "Dia": 10, "Data_str": "10-jul.", "Categoria": "Acidente de trânsito", "Zona": "Zona Oeste", "Equipe": "Hugo - Vitor - Maggessi", "Endereço": "TRANSOLÍMPICA - ALT. EST. BRT PADRE JOÃO CRIBBIN - MAGALHÃES BASTOS", "Agência Validadora": "VIARIO"}, {"QTE": 50.0, "Dia": 10, "Data_str": "10-jul.", "Categoria": "Acidente de trânsito", "Zona": "Zona Norte", "Equipe": "Hugo - Vitor - Maggessi", "Endereço": "AVENIDA BRASIL - ALT. TREVO DAS MISSÕES - SENT. Z. OESTE - CORDOVIL", "Agência Validadora": "BR T- CET-RIO"}, {"QTE": 51.0, "Dia": 10, "Data_str": "10-jul.", "Categoria": "Enguiço de veículo", "Zona": "Zona Oeste", "Equipe": "Hugo - Vitor - Maggessi", "Endereço": "Rua Felipe Cardoso, sentido Guaratiba", "Agência Validadora": "Tixxi"}, {"QTE": 52.0, "Dia": 10, "Data_str": "10-jul.", "Categoria": "Operação Policial", "Zona": "Centro", "Equipe": "Matheus / Jackson / Ricardo", "Endereço": "Linha Vermelha - Alt. KM 3 - Sent. Centro - Caju", "Agência Validadora": "TIXXI"}, {"QTE": 53.0, "Dia": 10, "Data_str": "10-jul.", "Categoria": "Ocorrência CBMERJ", "Zona": "Zona Norte", "Equipe": "Matheus / Jackson / Ricardo", "Endereço": "Linha Vermelha - Alt. KM 1 - Sent. Centro - São Cristóvão", "Agência Validadora": "CET-RIO"}, {"QTE": 54.0, "Dia": 10, "Data_str": "10-jul.", "Categoria": "Acidente de trânsito", "Zona": "Centro", "Equipe": "Matheus / Jackson / Ricardo", "Endereço": "Av. Presidente Vargas - Alt. Est. Metrô Cidade Nova - Sent. Praça da Bandeira - Cidade Nova", "Agência Validadora": "TIXXI"}, {"QTE": 55.0, "Dia": 10, "Data_str": "10-jul.", "Categoria": "Ocorrência CBMERJ", "Zona": "Centro", "Equipe": "Matheus / Jackson / Ricardo", "Endereço": "Av. Brasil - Alt. R. Tiboim - Sent. Centro - Penha", "Agência Validadora": "TIXXI"}, {"QTE": 56.0, "Dia": 10, "Data_str": "10-jul.", "Categoria": "Enguiço de veículo", "Zona": "Zona Norte", "Equipe": "Matheus / Jackson / Ricardo", "Endereço": "Av. Brasil - Alt. R. do Alpiste - Sent. Z. Oeste - Penha", "Agência Validadora": "TIXXI"}, {"QTE": 57.0, "Dia": 10, "Data_str": "10-jul.", "Categoria": "Operação Policial", "Zona": "Zona Sul", "Equipe": "Matheus / Jackson / Ricardo", "Endereço": "Av. Borges de Medeiros - Alt. R. 2 - Sent. Gávea - Lagoa", "Agência Validadora": "TIXXI"}, {"QTE": 58.0, "Dia": 10, "Data_str": "10-jul.", "Categoria": "Acidente de trânsito", "Zona": "Zona Norte", "Equipe": "Matheus / Jackson / Ricardo", "Endereço": "R. Manoel Vitorino - Alt. R. Assis Carneiro - Piedade", "Agência Validadora": "TIXXI"}, {"QTE": 59.0, "Dia": 11, "Data_str": "11-jul.", "Categoria": "Acidente de trânsito", "Zona": "Zona Norte", "Equipe": "Matheus / Jackson / Ricardo", "Endereço": "Av. Presidente Castelo Branco - Alt. Viaduto Oduvaldo Cozzi - Sent. Méier - Maracanã", "Agência Validadora": "TIXXI"}, {"QTE": 60.0, "Dia": 11, "Data_str": "11-jul.", "Categoria": "Tombamento de veículo", "Zona": "Zona Oeste", "Equipe": "Matheus / Jackson / Ricardo", "Endereço": "Av. Brasil - Alt. Parque Olímpico de Deodoro - Sent. Santa Cruz - Vila Militar", "Agência Validadora": "TIXXI"}, {"QTE": 61.0, "Dia": 11, "Data_str": "11-jul.", "Categoria": "Operação Policial", "Zona": "Centro", "Equipe": "Matheus / Jackson / Ricardo", "Endereço": "Av. Presidente Vargas - Alt. Sambódromo - Sent. Candelária - Centro", "Agência Validadora": "TIXXI"}, {"QTE": 62.0, "Dia": 11, "Data_str": "11-jul.", "Categoria": "Acidente de trânsito", "Zona": "Zona Oeste", "Equipe": "Matheus / Jackson / Ricardo", "Endereço": "Av. Brasil - Alt. Av. Dra Maria Estrela - Sent. Santa Cruz - Bangu", "Agência Validadora": "TIXXI"}, {"QTE": 63.0, "Dia": 11, "Data_str": "11-jul.", "Categoria": "Enguiço de veículo", "Zona": "Zona Norte", "Equipe": "Carlos / Vitor / Maggessi", "Endereço": "RUA TEIXEIRA SOARES - MARACANÃ - ALT. GALETO BANDIERA - SENT. CENTRO", "Agência Validadora": "Cet-Rio"}, {"QTE": 64.0, "Dia": 11, "Data_str": "11-jul.", "Categoria": "Incêndio", "Zona": "Zona Norte", "Equipe": "Carlos / Vitor / Maggessi", "Endereço": "LINHA VERMELHA - GALEÃO - ALT. KM 9 - SENT. CENTRO", "Agência Validadora": "Cet-Rio"}, {"QTE": 65.0, "Dia": 11, "Data_str": "11-jul.", "Categoria": "Operação Policial", "Zona": "Zona Oeste", "Equipe": "Carlos / Vitor / Maggessi", "Endereço": "AVENIDA MINISTRO IVAN LINS - BARRA DA TIJUCA - ALT. PONTE DA JOATINGA - SENT. RECREIO", "Agência Validadora": "TIXXI"}, {"QTE": 66.0, "Dia": 11, "Data_str": "11-jul.", "Categoria": "Acidente de trânsito", "Zona": "Zona Oeste", "Equipe": "Carlos / Vitor / Maggessi", "Endereço": "TRANSOLÍMPICA - TAQUARA - ALT. EST. BRT COLÔNIA - SENT. RECREIO", "Agência Validadora": "TIXXI"}, {"QTE": 67.0, "Dia": 11, "Data_str": "11-jul.", "Categoria": "Enguiço de veículo", "Zona": "Zona Sul", "Equipe": "Carlos / Vitor / Maggessi", "Endereço": "Av. Padre Leonel Franca sent. Barra da Tijuca", "Agência Validadora": "Drone"}, {"QTE": 68.0, "Dia": 11, "Data_str": "11-jul.", "Categoria": "Acidente de trânsito", "Zona": "Zona Oeste", "Equipe": "Matheus /Jackson / Vinícius", "Endereço": "Estr. do Monteiro - Alt. Estr. Iaraquã - Sent. Senador Vasconcelos - Campo Grande", "Agência Validadora": "TIXXI"}, {"QTE": 69.0, "Dia": 11, "Data_str": "11-jul.", "Categoria": "Atropelamento", "Zona": "Centro", "Equipe": "Matheus /Jackson / Vinícius", "Endereço": "Av. Brasil - Alt Cemitério do Caju - Sent. Centro - Caju", "Agência Validadora": "Cet-rio"}, {"QTE": 70.0, "Dia": 11, "Data_str": "11-jul.", "Categoria": "Acidente de trânsito", "Zona": "Zona Sul", "Equipe": "Matheus / Jackson / Vinícius", "Endereço": "Av. Borges de Medeiros - Alt. R. Batista da Costa - Sent. Túnel Rebouças - Lagoa", "Agência Validadora": "TIXXI"}, {"QTE": 71.0, "Dia": 11, "Data_str": "11-jul.", "Categoria": "Acidente de trânsito", "Zona": "Zona Oeste", "Equipe": "Matheus / Jackson / Vinícius", "Endereço": "Av. Lúcio Costa - Alt. Nº 3200 - Sent. Recreio - Barra da Tijuca", "Agência Validadora": "CET-RIO"}, {"QTE": 72.0, "Dia": 11, "Data_str": "11-jul.", "Categoria": "Enguiço de veículo", "Zona": "Zona Oeste", "Equipe": "Matheus / Jackson / Vinícius", "Endereço": "AVENIDA SALVADOR ALLENDE - ALT. BRT MINHA PRAIA - SENT. RECREIO - BARRA DA TIJUCA", "Agência Validadora": "TIXXI"}, {"QTE": 73.0, "Dia": 11, "Data_str": "11-jul.", "Categoria": "Atropelamento", "Zona": "Zona Norte", "Equipe": "Matheus / Jackson / Vinícius", "Endereço": "R. Doutor Satamini - Alt. Est. Metrô Afonso Pena - Tijuca", "Agência Validadora": "CICC"}, {"QTE": 74.0, "Dia": 11, "Data_str": "11-jul.", "Categoria": "Operação Policial", "Zona": "Zona Norte", "Equipe": "Matheus / Jackson / Vinícius", "Endereço": "LINHA VERMELHA - ALT. KM3 - SENT. BAIXADA - CAJU", "Agência Validadora": "TIXXI"}, {"QTE": 75.0, "Dia": 11, "Data_str": "11-jul.", "Categoria": "Acidente de trânsito", "Zona": "Zona Norte", "Equipe": "Matheus / Jackson / Vinícius", "Endereço": "Av. Dom Hélder Câmara - Alt. Estr. Adhemar Bebiano - Sent. Linha Amarela - Del Castilho", "Agência Validadora": "TIXXI"}, {"QTE": 76.0, "Dia": 11, "Data_str": "11-jul.", "Categoria": "Acidente de trânsito", "Zona": "Zona Norte", "Equipe": "Matheus / Jackson / Vinícius", "Endereço": "Elevado Freyssinet - Sent. Centro - Rio Comprido", "Agência Validadora": "CET-RIO"}, {"QTE": 77.0, "Dia": 12, "Data_str": "12-jul.", "Categoria": "Acidente de trânsito", "Zona": "Zona Oeste", "Equipe": "Matheus / Jackson / Vinícius", "Endereço": "Av. Ayrton Senna - Alt. Giro do Cebolinha - Sent. Linha Amarela - Gardênia Azul", "Agência Validadora": "TIXXI"}, {"QTE": 78.0, "Dia": 12, "Data_str": "12-jul.", "Categoria": "Acidente de trânsito", "Zona": "Centro", "Equipe": "Matheus / Jackson / Vinícius", "Endereço": "Av. Brasil - Alt. R. Eduardo Luís Lopes - Sent. Centro - Caju", "Agência Validadora": "TIXXI"}, {"QTE": 79.0, "Dia": 12, "Data_str": "12-jul.", "Categoria": "Acidente de trânsito", "Zona": "Zona Norte", "Equipe": "Daniel / Leonardo / Vitor", "Endereço": "ESTRADA DO COLÉGIO - ALT. AV. PASTOR MARTIN LUTHER KING - SENT. IRAJÁ - COLÉGIO", "Agência Validadora": "TIXXI"}, {"QTE": 80.0, "Dia": 12, "Data_str": "12-jul.", "Categoria": "Acidente de trânsito", "Zona": "Zona Norte", "Equipe": "Daniel / Leonardo / Vitor", "Endereço": "AVENIDA BRASIL - ALT. PASSARELA 30 - SENT. CENTRO - GUADALUPE", "Agência Validadora": "CET-RIO"}, {"QTE": 81.0, "Dia": 12, "Data_str": "12-jul.", "Categoria": "Queda de moto/veículo", "Zona": "Centro", "Equipe": "Daniel / Leonardo / Vitor", "Endereço": "AVENIDA TRINTA E UM DE MARÇO - ALT. SAMBÓDROMO - SENT. SANTO CRISTO - SANTO CRISTO", "Agência Validadora": "CBMERJ"}, {"QTE": 82.0, "Dia": 12, "Data_str": "12-jul.", "Categoria": "Acidente de trânsito", "Zona": "Centro", "Equipe": "Daniel / Leonardo / Vitor", "Endereço": "RUA DO RUSSEL - ALT. AV. BEIRA MAR - GLÓRIA", "Agência Validadora": "CBMERJ"}, {"QTE": 83.0, "Dia": 12, "Data_str": "12-jul.", "Categoria": "Enguiço de veículo", "Zona": "Zona Norte", "Equipe": "Daniel / Leonardo / Vitor", "Endereço": "ESTRADA DA ÁGUA GRANDE - ALT. R. FLORÂNIA - SENT. CORDOVIL - VISTA ALEGRE", "Agência Validadora": "TIXXI"}, {"QTE": 84.0, "Dia": 12, "Data_str": "12-jul.", "Categoria": "Acidente de trânsito", "Zona": "Zona Sul", "Equipe": "Daniel / Leonardo / Vitor", "Endereço": "AVENIDA EPITÁCIO PESSOA - ALT. Nº 2030 - SENT. COPACABANA - LAGOA", "Agência Validadora": "CBMERJ"}, {"QTE": 85.0, "Dia": 12, "Data_str": "12-jul.", "Categoria": "Acidente de trânsito", "Zona": "Zona Oeste", "Equipe": "Daniel / Leonardo / Vitor", "Endereço": "ESTRADA DA BARRA DA TIJUCA - ALT. MARINA BARRA CLUBE - SENT. ALTO DA BOA VISTA - BARRA DA TIJUCA", "Agência Validadora": "CBMERJ"}, {"QTE": 86.0, "Dia": 12, "Data_str": "12-jul.", "Categoria": "Acidente de trânsito", "Zona": "Zona Oeste", "Equipe": "Daniel / Leonardo / Vitor", "Endereço": "AVENIDA DAS AMÉRICAS - ALT. ESTR. BENVINDO DE NOVAES - SENT. BARRA DA TIJUCA - RECREIO DOS BANDEIRANTES", "Agência Validadora": "CBMERJ"}, {"QTE": 87.0, "Dia": 12, "Data_str": "12-jul.", "Categoria": "Atropelamento", "Zona": "Zona Norte", "Equipe": "Daniel / Leonardo / Vitor", "Endereço": "RUA VINTE E QUATRO DE MAIO - ALT. R. GREGÓRIO NEVES - ENGENHO NOVO", "Agência Validadora": "CBMERJ"}, {"QTE": 88.0, "Dia": 12, "Data_str": "12-jul.", "Categoria": "Acidente de trânsito", "Zona": "Zona Oeste", "Equipe": "Daniel / Leonardo / Vitor", "Endereço": "AVENIDA ALFREDO BALTHAZAR DA SILVEIRA - ALT. R. AGENOR RABELLO - RECREIO DOS BANDEIRANTES", "Agência Validadora": "CET-RIO"}, {"QTE": 89.0, "Dia": 12, "Data_str": "12-jul.", "Categoria": "Acidente de trânsito", "Zona": "Zona Oeste", "Equipe": "Daniel / Leonardo / Vitor", "Endereço": "AVENIDA DOM JOÃO VI - ALT. Nº 753 - SENT. BARRA DA TIJUCA - GUARATIBA", "Agência Validadora": "CET-RIO"}, {"QTE": 90.0, "Dia": 12, "Data_str": "12-jul.", "Categoria": "Enguiço de veículo", "Zona": "Zona Norte", "Equipe": "Daniel / Leonardo / Vitor", "Endereço": "ELEVADO ENG. RUFINO DE A. PIZARRO - SENT. TUNEL REBOUÇAS - SÃO CRISTÓVÃO", "Agência Validadora": "CET-RIO"}, {"QTE": 91.0, "Dia": 12, "Data_str": "12-jul.", "Categoria": "Queda de moto/veículo", "Zona": "Zona Norte", "Equipe": "Daniel / Leonardo / Vitor", "Endereço": "LINHA AMARELA - ALT. SAÍDA 9A - SENT. BARRA - BONSUCESSO", "Agência Validadora": "LAMSA"}, {"QTE": 92.0, "Dia": 12, "Data_str": "12-jul.", "Categoria": "Acidente de trânsito", "Zona": "Zona Norte", "Equipe": "Daniel / Leonardo / Vitor", "Endereço": "LINHA VERMELHA - ALT. KM 10 - SENT. CENTRO - GALEÃO", "Agência Validadora": "CBMERJ"}, {"QTE": 93.0, "Dia": 12, "Data_str": "12-jul.", "Categoria": "Acidente de trânsito", "Zona": "Zona Oeste", "Equipe": "Daniel / Leonardo / Vitor", "Endereço": "ESTRADA DO PAU-FERRO - ALT. Nº 647 - SSENT. PECHINCHA - FREGUESIA JACAREPAGUÁ", "Agência Validadora": "CBMERJ"}, {"QTE": 94.0, "Dia": 12, "Data_str": "12-jul.", "Categoria": "Atropelamento", "Zona": "Zona Oeste", "Equipe": "Daniel / Leonardo / Vitor", "Endereço": "TRANSOLÍMPICA - ALT. EST. BRT BOIUNA - SENT. RECREIO - TAQUARA", "Agência Validadora": "VIARIO"}, {"QTE": 95.0, "Dia": 12, "Data_str": "12-jul.", "Categoria": "Queda de moto/veículo", "Zona": "Zona Norte", "Equipe": "Daniel / Leonardo / Vitor", "Endereço": "LINHA VERMELHA - ALT. KM 10 - SENT. BAIXADA - GALEÃO", "Agência Validadora": "CBMERJ"}, {"QTE": 96.0, "Dia": 12, "Data_str": "12-jul.", "Categoria": "Enguiço de veículo", "Zona": "Zona Norte", "Equipe": "Daniel / Leonardo / Vitor", "Endereço": "LINHA VERMELHA - ALT. KM 8 - SENT. CENTRO - CIDADE UNIVERSITÁRIA", "Agência Validadora": "TIXXI"}, {"QTE": 97.0, "Dia": 12, "Data_str": "12-jul.", "Categoria": "Evento Religioso", "Zona": "Zona Sul", "Equipe": "Daniel / Leonardo / Vitor", "Endereço": "RUA VISCONDE DE PIRAJÁ - IPANEMA", "Agência Validadora": "CET-RIO"}, {"QTE": 98.0, "Dia": 13, "Data_str": "13-jul.", "Categoria": "Acidente de trânsito", "Zona": "Centro", "Equipe": "LEO / CARLOS / DANIEL", "Endereço": "AV. FRANCISCO BICALHO - ALT. R. FRANCISCO EUGÊNIO - SENT. CENTRO", "Agência Validadora": "TIXXI"}, {"QTE": 99.0, "Dia": 13, "Data_str": "13-jul.", "Categoria": "Acidente de trânsito", "Zona": "Centro", "Equipe": "LEO / CARLOS / DANIEL", "Endereço": "AV. FRANCISCO BICALHO - ALT. LINHA FÉRREA - SENT. CENTRO", "Agência Validadora": "TIXXI"}, {"QTE": 100.0, "Dia": 13, "Data_str": "13-jul.", "Categoria": "Enguiço de veículo", "Zona": "Zona Oeste", "Equipe": "LEO / CARLOS / DANIEL", "Endereço": "TRANSOLÍPICA - ALT. VILA MILITAR - SENT. RECREIO", "Agência Validadora": "TIXXI"}, {"QTE": "", "Dia": 13, "Data_str": "13-jul.", "Categoria": "Enguiço de veículo", "Zona": "Zona Oeste", "Equipe": "LEO / CARLOS / DANIEL", "Endereço": "TRANSOLÍPICA - ALT. DO TÚNEL - SENT. RECREIO", "Agência Validadora": "CONCESSIONÁRIA"}, {"QTE": "", "Dia": 13, "Data_str": "13-jul.", "Categoria": "Acidente de trânsito", "Zona": "Zona Norte", "Equipe": "LEO / CARLOS / DANIEL", "Endereço": "ESTRADA DO GALEÃO - ALT. ESTR DAS CANÁRIAS - SENT. PORTUGUESA", "Agência Validadora": "TIXXI"}, {"QTE": "", "Dia": 13, "Data_str": "13-jul.", "Categoria": "Acidente de trânsito", "Zona": "Zona Sul", "Equipe": "LEO / CARLOS / DANIEL", "Endereço": "AV AUGUSTO SEVERO - ALT. PRAÇA PARIS - SENT. BOTAFOGO", "Agência Validadora": "CICC"}, {"QTE": "", "Dia": 13, "Data_str": "13-jul.", "Categoria": "Acidente de trânsito", "Zona": "Zona Oeste", "Equipe": "LEO / CARLOS / DANIEL", "Endereço": "LINHA AMARELA - ALT. SAÍDA 9A - SENT. BARRA DA TIJUCA - MANGUINHOS", "Agência Validadora": "LAMSA"}, {"QTE": "", "Dia": 13, "Data_str": "13-jul.", "Categoria": "Enguiço de veículo", "Zona": "Centro", "Equipe": "LEO / CARLOS / DANIEL", "Endereço": "AVENIDA BRASIL - ALT. DA PASSARELA 21A- SENT. CENTRO - VIGÁRIO GERAL", "Agência Validadora": "CET-RIO"}, {"QTE": "", "Dia": 13, "Data_str": "13-jul.", "Categoria": "Queda de moto/veículo", "Zona": "Zona Oeste", "Equipe": "LEO / CARLOS / DANIEL", "Endereço": "LINHA AMARELA - ALT. CIDADE DE DEUS - SENT. BARRA - CIDADE DE DEUS", "Agência Validadora": "LAMSA"}];
+
+*/
+</script>
+<script>
+// ============ Design tokens per zone/category ============
+const ZONE_COLOR = {
+  'Zona Norte': '#4C8DF0',
+  'Zona Sul': '#33C9B8',
+  'Zona Oeste': '#F2A93B',
+  'Centro': '#8E8CF0',
+};
+const CAT_COLOR = {
+  'Acidente de trânsito': '#E8636B',
+  'Enguiço de veículo': '#F2A93B',
+  'Operação Policial': '#4C8DF0',
+  'Atropelamento': '#E85D5D',
+  'Manutenção na via': '#8E8CF0',
+  'Queda de moto/veículo': '#D98CD9',
+  'Incêndio': '#FF7A45',
+  'Ocorrência CBMERJ': '#33C9B8',
+  'Tombamento de veículo': '#B08968',
+  'Evento Religioso': '#7E8FA6',
+};
+const catColor = c => CAT_COLOR[c] || '#7E8FA6';
+const zoneColor = z => ZONE_COLOR[z] || '#7E8FA6';
+
+// ============ Filter state ============
+const state = { zonas: new Set(), categorias: new Set(), equipes: new Set() };
+
+const ZONAS_ORDER = ['Zona Norte','Zona Sul','Zona Oeste','Centro'];
+
+function uniqueSorted(field){
+  const counts = {};
+  RAW_DATA.forEach(d => counts[d[field]] = (counts[d[field]]||0)+1);
+  return Object.entries(counts).sort((a,b)=>b[1]-a[1]);
+}
+
+function filteredData(){
+  return RAW_DATA.filter(d =>
+    (state.zonas.size===0 || state.zonas.has(d.Zona)) &&
+    (state.categorias.size===0 || state.categorias.has(d.Categoria)) &&
+    (state.equipes.size===0 || state.equipes.has(d.Equipe))
+  );
+}
+
+function toggle(setObj, val){
+  if(setObj.has(val)) setObj.delete(val); else setObj.add(val);
+  render();
+}
+
+// ============ Build zone map ============
+function renderZoneMap(){
+  const el = document.getElementById('zonemap');
+  const data = filteredData();
+  const counts = {};
+  ZONAS_ORDER.forEach(z=>counts[z]=0);
+  RAW_DATA.forEach(d=>{
+    const passesOther = (state.categorias.size===0 || state.categorias.has(d.Categoria)) &&
+                         (state.equipes.size===0 || state.equipes.has(d.Equipe));
+    if(passesOther) counts[d.Zona] = (counts[d.Zona]||0) + (state.zonas.size===0 || state.zonas.has(d.Zona) ? 1 : 0) + (state.zonas.size===0 ? 0 : 0);
+  });
+  // simpler: count matching all filters except zona itself, for bar width reference
+  const maxRef = {};
+  ZONAS_ORDER.forEach(z=>{
+    maxRef[z] = RAW_DATA.filter(d => d.Zona===z &&
+      (state.categorias.size===0 || state.categorias.has(d.Categoria)) &&
+      (state.equipes.size===0 || state.equipes.has(d.Equipe))
+    ).length;
+  });
+  const maxVal = Math.max(...Object.values(maxRef), 1);
+
+  const ids = {'Zona Norte':'z-norte','Zona Oeste':'z-oeste','Centro':'z-centro','Zona Sul':'z-sul'};
+  el.innerHTML = ZONAS_ORDER.map(z => {
+    const id = ids[z];
+    const val = maxRef[z];
+    const pct = Math.round((val/maxVal)*100);
+    const isActive = state.zonas.has(z);
+    const isDim = state.zonas.size>0 && !isActive;
+    return `<div class="zcell ${isActive?'active':''} ${isDim?'dim':''}" id="${id}" style="--zc:${zoneColor(z)}" data-zone="${z}">
+      <div class="zname">${z}</div>
+      <div class="zcount mono">${val}</div>
+      <div class="zbar" style="width:${pct}%"></div>
+    </div>`;
+  }).join('');
+  ZONAS_ORDER.forEach(z=>{
+    const id = ids[z];
+    document.getElementById(id).addEventListener('click', ()=> toggle(state.zonas, z));
+  });
+}
+
+// ============ Chip rows ============
+function renderChips(containerId, field, setObj, colorFn){
+  const el = document.getElementById(containerId);
+  const opts = uniqueSorted(field);
+  el.innerHTML = opts.map(([val,count])=>{
+    const active = setObj.has(val);
+    const c = colorFn ? colorFn(val) : null;
+    const style = active && c ? `background:${c}; border-color:${c}; color:#12100a;` : '';
+    return `<div class="chip ${active?'active':''}" style="${style}" data-val="${val.replace(/"/g,'&quot;')}">${val} <span class="mono" style="opacity:.7">${count}</span></div>`;
+  }).join('');
+  [...el.querySelectorAll('.chip')].forEach(chip=>{
+    chip.addEventListener('click', ()=> toggle(setObj, chip.dataset.val));
+  });
+}
+
+function renderActiveFilters(){
+  const el = document.getElementById('active-filters');
+  const all = [
+    ...[...state.zonas].map(v=>({v,type:'zona'})),
+    ...[...state.categorias].map(v=>({v,type:'categoria'})),
+    ...[...state.equipes].map(v=>({v,type:'equipe'})),
+  ];
+  if(all.length===0){ el.innerHTML = `<span style="color:var(--muted-2); font-size:12px;">Nenhum filtro ativo — exibindo todas as ${RAW_DATA.length} ocorrências</span>`; return; }
+  el.innerHTML = all.map(({v,type})=>`<div class="chip active" data-type="${type}" data-val="${v.replace(/"/g,'&quot;')}" style="background:var(--panel-2); color:var(--text); border-color:var(--muted-2);">${v} ✕</div>`).join('');
+  [...el.querySelectorAll('.chip')].forEach(chip=>{
+    chip.addEventListener('click', ()=>{
+      const type = chip.dataset.type, val = chip.dataset.val;
+      const map = {zona:state.zonas, categoria:state.categorias, equipe:state.equipes};
+      map[type].delete(val);
+      render();
+    });
+  });
+}
+
+// ============ Charts ============
+let charts = {};
+function makeOrUpdate(id, config){
+  if(charts[id]){ charts[id].destroy(); }
+  charts[id] = new Chart(document.getElementById(id), config);
+}
+
+Chart.defaults.color = '#7E8FA6';
+Chart.defaults.font.family = "'Inter', sans-serif";
+Chart.defaults.font.size = 11.5;
+
+function renderCharts(){
+  const data = filteredData();
+
+  // tipo
+  const tipoCounts = {};
+  data.forEach(d=>tipoCounts[d.Categoria]=(tipoCounts[d.Categoria]||0)+1);
+  const tipoSorted = Object.entries(tipoCounts).sort((a,b)=>b[1]-a[1]);
+  document.getElementById('tag-tipo').textContent = `${tipoSorted.length} tipos`;
+  makeOrUpdate('chart-tipo', {
+    type:'bar',
+    data:{ labels: tipoSorted.map(x=>x[0]), datasets:[{ data: tipoSorted.map(x=>x[1]), backgroundColor: tipoSorted.map(x=>catColor(x[0])), borderRadius:5, maxBarThickness:26 }] },
+    options:{
+      indexAxis:'y', plugins:{legend:{display:false}},
+      scales:{ x:{grid:{color:'#152233'}, ticks:{precision:0}}, y:{grid:{display:false}} }
+    }
+  });
+
+  // zona
+  const zonaCounts = {};
+  ZONAS_ORDER.forEach(z=>zonaCounts[z]=0);
+  data.forEach(d=>zonaCounts[d.Zona]=(zonaCounts[d.Zona]||0)+1);
+  document.getElementById('tag-zona').textContent = `${data.length} ocorrências`;
+  makeOrUpdate('chart-zona', {
+    type:'doughnut',
+    data:{ labels: ZONAS_ORDER, datasets:[{ data: ZONAS_ORDER.map(z=>zonaCounts[z]), backgroundColor: ZONAS_ORDER.map(zoneColor), borderColor:'#111E2E', borderWidth:3 }] },
+    options:{ plugins:{ legend:{ position:'bottom', labels:{boxWidth:10, padding:14} } }, cutout:'62%' }
+  });
+
+  // dia
+  const diaCounts = {};
+  data.forEach(d=>{
+    const key = d.Data || d.Data_str;
+    diaCounts[key] = (diaCounts[key]||0) + 1;
+  });
+  const dias = Object.keys(diaCounts).sort();
+  makeOrUpdate('chart-dia', {
+    type:'line',
+    data:{ labels: dias.map(d=>new Date(`${d}T00:00:00`).toLocaleDateString('pt-BR',{day:'2-digit', month:'short'})), datasets:[{ data: dias.map(d=>diaCounts[d]), borderColor:'#F2A93B', backgroundColor:'rgba(242,169,59,0.12)', fill:true, tension:.3, pointRadius:3, pointBackgroundColor:'#F2A93B' }] },
+    options:{ plugins:{legend:{display:false}}, scales:{ x:{grid:{display:false}}, y:{grid:{color:'#152233'}, ticks:{precision:0}} } }
+  });
+
+  // equipe
+  const eqCounts = {};
+  data.forEach(d=>eqCounts[d.Equipe]=(eqCounts[d.Equipe]||0)+1);
+  const eqSorted = Object.entries(eqCounts).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  makeOrUpdate('chart-equipe', {
+    type:'bar',
+    data:{ labels: eqSorted.map(x=>x[0]), datasets:[{ data: eqSorted.map(x=>x[1]), backgroundColor:'#4C8DF0', borderRadius:5, maxBarThickness:22 }] },
+    options:{ indexAxis:'y', plugins:{legend:{display:false}}, scales:{ x:{grid:{color:'#152233'}, ticks:{precision:0}}, y:{grid:{display:false}, ticks:{font:{size:10.5}}} } }
+  });
+}
+
+// ============ KPIs ============
+function renderKPIs(){
+  const data = filteredData();
+  const el = document.getElementById('kpis');
+  const total = data.length;
+  const zonaCounts = {};
+  data.forEach(d=>zonaCounts[d.Zona]=(zonaCounts[d.Zona]||0)+1);
+  const topZona = Object.entries(zonaCounts).sort((a,b)=>b[1]-a[1])[0];
+  const catCounts = {};
+  data.forEach(d=>catCounts[d.Categoria]=(catCounts[d.Categoria]||0)+1);
+  const topCat = Object.entries(catCounts).sort((a,b)=>b[1]-a[1])[0];
+  const diaCounts = {};
+  data.forEach(d=>{
+    const key = d.Data || d.Data_str;
+    diaCounts[key] = (diaCounts[key]||0) + 1;
+  });
+  const topDia = Object.entries(diaCounts).sort((a,b)=>b[1]-a[1])[0];
+
+  const cards = [
+    {label:'Total de ocorrências', value: total, sub: state.zonas.size||state.categorias.size||state.equipes.size ? 'com filtros aplicados' : `de ${RAW_DATA.length} registradas`, accent:'#F2A93B'},
+    {label:'Zona mais afetada', value: topZona?topZona[0]:'—', sub: topZona?`${topZona[1]} ocorrências`:'', accent: topZona?zoneColor(topZona[0]):'#7E8FA6'},
+    {label:'Tipo mais frequente', value: topCat?topCat[0]:'—', sub: topCat?`${topCat[1]} registros`:'', accent: topCat?catColor(topCat[0]):'#7E8FA6'},
+    {label:'Dia de pico', value: topDia ? new Date(`${topDia[0]}T00:00:00`).toLocaleDateString('pt-BR',{day:'2-digit', month:'short'}) : '—', sub: topDia?`${topDia[1]} ocorrências no dia`:'', accent:'#33C9B8'},
+  ];
+  el.innerHTML = cards.map(c=>`
+    <div class="kpi" style="--kpi-accent:${c.accent}">
+      <div class="kpi-label">${c.label}</div>
+      <div class="kpi-value" style="font-size:${c.value.toString().length>14?'16px':'26px'}">${c.value}</div>
+      <div class="kpi-sub">${c.sub}</div>
+    </div>`).join('');
+}
+
+// ============ Log table ============
+function renderLog(){
+  const data = filteredData().sort((a,b)=> (a.Data||'').localeCompare(b.Data||'') || a.QTE-b.QTE);
+  const body = document.getElementById('log-body');
+  document.getElementById('tag-log').textContent = `${data.length} registros`;
+  if(data.length===0){
+    body.innerHTML = `<tr><td colspan="6"><div class="empty-state">Nenhuma ocorrência corresponde aos filtros selecionados.</div></td></tr>`;
+    return;
+  }
+  body.innerHTML = data.map(d=>`
+    <tr>
+      <td class="mono">${d.QTE||''}</td>
+      <td class="mono">${d.Data_str}</td>
+      <td><span class="badge" style="background:${catColor(d.Categoria)}22; color:${catColor(d.Categoria)};">${d.Categoria}</span></td>
+      <td><span class="badge" style="background:${zoneColor(d.Zona)}22; color:${zoneColor(d.Zona)};">${d.Zona}</span></td>
+      <td style="color:var(--muted); font-size:11.5px;">${d.Endereço}</td>
+      <td style="font-size:11px; color:var(--muted-2);">${d.Equipe}</td>
+    </tr>`).join('');
+}
+
+// ============ Master render ============
+function render(){
+  renderZoneMap();
+  renderChips('cat-chips', 'Categoria', state.categorias, catColor);
+  renderChips('equipe-chips', 'Equipe', state.equipes, null);
+  renderActiveFilters();
+  renderCharts();
+  renderKPIs();
+  renderLog();
+}
+
+document.getElementById('reset-btn').addEventListener('click', ()=>{
+  state.zonas.clear(); state.categorias.clear(); state.equipes.clear();
+  render();
+});
+
+render();
+</script>
+<script src="data_imported.js"></script>
+<script>
+// ============ XLSX importer (SheetJS) ============
+function tryParseDate(val){
+  if(!val) return null;
+  if(val instanceof Date) return val.toISOString().slice(0,10);
+  if(typeof val === 'number'){
+    // Excel serial
+    const dt = new Date(Math.round((val - 25569) * 86400 * 1000));
+    return dt.toISOString().slice(0,10);
+  }
+  // try ISO or dd/mm/yyyy
+  const iso = new Date(val);
+  if(!isNaN(iso)) return iso.toISOString().slice(0,10);
+  // dd/mm/yyyy
+  const m = val.toString().match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
+  if(m){
+    const d = (+m[1]).toString().padStart(2,'0');
+    const mo = (+m[2]).toString().padStart(2,'0');
+    const y = m[3].length===2?('20'+m[3]):m[3];
+    return `${y}-${mo}-${d}`;
+  }
+  return null;
+}
+
+function mapRowToRecord(row){
+  // find keys heuristically
+  const keys = Object.keys(row);
+  const k = s => keys.find(x=>x.toLowerCase().includes(s));
+  const dateKey = k('data') || k('date') || k('dia');
+  const catKey = k('categoria') || k('categoria_ocorr') || k('ocorr');
+  const eqKey = k('equipe') || k('team');
+  const endKey = k('end') || k('endereço') || k('endereco') || k('address');
+  const agKey = k('ag') || k('agência') || k('agencia') || k('validad');
+
+  const rawDate = dateKey ? row[dateKey] : null;
+  const parsed = tryParseDate(rawDate);
+  const dateStr = parsed ? new Date(parsed).toLocaleDateString('pt-BR',{day:'2-digit', month:'short'}) : (rawDate||'');
+
+  return {
+    Data: parsed || rawDate || '',
+    Data_str: parsed ? `${String(new Date(parsed).getDate()).padStart(2,'0')}-${String(new Date(parsed).toLocaleDateString('pt-BR',{month:'short'}))}` : (row[dateKey]||''),
+    Categoria: row[catKey] || row['Categoria'] || row['categoria'] || '',
+    Equipe: row[eqKey] || '',
+    Endereço: row[endKey] || '',
+    'Agência Validadora': row[agKey] || ''
+  };
+}
+
+function handleXlsxFiles(files){
+  const inputFiles = Array.from(files||[]);
+  if(inputFiles.length===0) return;
+  document.getElementById('import-status').textContent = 'processando...';
+  let imported = 0;
+  inputFiles.reduce((p,f)=>p.then(()=>{
+    return new Promise((res,rej)=>{
+      const r = new FileReader();
+      r.onload = (e)=>{
+        try{
+          const data = e.target.result;
+          const wb = XLSX.read(data, {type:'array', cellDates:true});
+          wb.SheetNames.forEach(sn=>{
+            const ws = wb.Sheets[sn];
+            const rows = XLSX.utils.sheet_to_json(ws, {raw:false, dateNF:'yyyy-mm-dd'});
+            rows.forEach(rr=>{
+              const rec = mapRowToRecord(rr);
+              if(rec.Data || rec.Categoria || rec.Endereço){
+                RAW_DATA.push({
+                  QTE: RAW_DATA.length+1,
+                  Dia: rec.Data ? new Date(rec.Data).getDate() : '',
+                  Data: rec.Data,
+                  Data_str: rec.Data_str || '',
+                  Categoria: normalizeCategory(rec.Categoria),
+                  Equipe: rec.Equipe,
+                  Endereço: rec.Endereço,
+                  'Agência Validadora': rec['Agência Validadora'],
+                  Zona: inferZone(rec.Endereço)
+                });
+                imported++;
+              }
+            });
+          });
+          res();
+        }catch(err){ rej(err); }
+      };
+      r.onerror = rej;
+      r.readAsArrayBuffer(f);
+    });
+  }, Promise.resolve()).then(()=>{
+    document.getElementById('import-status').textContent = `importados ${imported} registros`;
+    render();
+  }).catch(err=>{
+    console.error(err);
+    document.getElementById('import-status').textContent = 'erro ao importar (veja console)';
+  });
+}
+
+// wire UI
+document.getElementById('import-btn').addEventListener('click', ()=>document.getElementById('xlsx-input').click());
+const xinput = document.getElementById('xlsx-input');
+xinput.addEventListener('change', (ev)=>handleXlsxFiles(ev.target.files));
+
+// basic drag/drop support on body
+['dragenter','dragover'].forEach(ev=>document.body.addEventListener(ev,e=>{e.preventDefault(); e.dataTransfer.dropEffect='copy';}, false));
+document.body.addEventListener('drop', e=>{ e.preventDefault(); const files = e.dataTransfer.files; if(files && files.length) handleXlsxFiles(files); }, false);
+// If a pre-generated IMPORTED_RAW exists (from server-side scan), import it now
+if(typeof IMPORTED_RAW !== 'undefined' && Array.isArray(IMPORTED_RAW)){
+  let importedAuto = 0;
+  IMPORTED_RAW.forEach(rr=>{
+    const rec = mapRowToRecord(rr);
+    if(rec.Data || rec.Categoria || rec.Endereço){
+      RAW_DATA.push({
+        QTE: RAW_DATA.length+1,
+        Dia: rec.Data ? new Date(rec.Data).getDate() : '',
+        Data: rec.Data,
+        Data_str: rec.Data_str || '',
+        Categoria: normalizeCategory(rec.Categoria),
+        Equipe: rec.Equipe,
+        Endereço: rec.Endereço,
+        'Agência Validadora': rec['Agência Validadora'],
+        Zona: inferZone(rec.Endereço)
+      });
+      importedAuto++;
+    }
+  });
+  if(importedAuto>0){
+    document.getElementById('import-status').textContent = `importados ${importedAuto} registros (autom.)`;
+    render();
+  }
+}
+</script>
+</body>
+</html>
