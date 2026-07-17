@@ -249,9 +249,14 @@
         <canvas id="chart-dia" height="200"></canvas>
       </div>
       <div class="panel">
-        <div class="panel-title">Equipes com mais ocorrências</div>
-        <canvas id="chart-equipe" height="200"></canvas>
-      </div>
+  <div class="panel-title">Equipes com mais ocorrências</div>
+  <canvas id="chart-equipe" height="200"></canvas>
+</div>
+
+<div class="panel">
+  <div class="panel-title">Efetividade de Captura por Mês</div>
+  <canvas id="chart-captura-mes" height="200"></canvas>
+</div>
     </div>
   </div>
 
@@ -491,14 +496,176 @@ function renderCharts(){
   });
 
   // equipe
-  const eqCounts = {};
-  data.forEach(d=>eqCounts[d.Equipe]=(eqCounts[d.Equipe]||0)+1);
-  const eqSorted = Object.entries(eqCounts).sort((a,b)=>b[1]-a[1]).slice(0,8);
-  makeOrUpdate('chart-equipe', {
-    type:'bar',
-    data:{ labels: eqSorted.map(x=>x[0]), datasets:[{ data: eqSorted.map(x=>x[1]), backgroundColor:'#4C8DF0', borderRadius:5, maxBarThickness:20 }] },
-    options:{ indexAxis:'y', plugins:{legend:{display:false}}, scales:{ x:{grid:{color:'#152233'}, ticks:{precision:0}}, y:{grid:{display:false}, ticks:{font:{size:10}}} } }
+const eqCounts = {};
+
+data
+  .filter(d => {
+      const eq = String(d.Equipe || '').trim().toUpperCase();
+      return eq !== '' &&
+             eq !== 'NONE' &&
+             eq !== 'NULL' &&
+             eq !== 'NAN';
+  })
+  .forEach(d=>{
+      eqCounts[d.Equipe]=(eqCounts[d.Equipe]||0)+1;
   });
+
+const eqSorted = Object.entries(eqCounts)
+  .sort((a,b)=>b[1]-a[1])
+  .slice(0,8);
+
+makeOrUpdate('chart-equipe', {
+  type:'bar',
+  data:{
+    labels:eqSorted.map(x=>x[0]),
+    datasets:[{
+      data:eqSorted.map(x=>x[1]),
+      backgroundColor:'#4C8DF0',
+      borderRadius:5,
+      maxBarThickness:20
+    }]
+  },
+  options:{
+    indexAxis:'y',
+    plugins:{legend:{display:false}},
+    scales:{
+      x:{grid:{color:'#152233'},ticks:{precision:0}},
+      y:{grid:{display:false},ticks:{font:{size:10}}}
+    }
+  }
+});
+
+
+// =======================================
+// EFETIVIDADE DE CAPTURA POR MÊS
+// =======================================
+
+const mesesGraf = ['Abril','Maio','Junho'];
+
+const totalMes = [];
+const capturadoMes = [];
+const percMes = [];
+
+mesesGraf.forEach(mes => {
+
+    const registros = RAW_DATA.filter(r => r.Mes === mes);
+
+    const total = registros.length;
+
+    const capturados = registros.filter(r =>
+        r['Alarmes utilizados'] &&
+        String(r['Alarmes utilizados']).trim() !== ''
+    ).length;
+
+    totalMes.push(total);
+    capturadoMes.push(capturados);
+
+    percMes.push(
+        total > 0
+            ? Number(((capturados / total) * 100).toFixed(1))
+            : 0
+    );
+});
+
+makeOrUpdate('chart-captura-mes', {
+
+    data: {
+        labels: mesesGraf,
+        datasets: [
+
+    {
+        type: 'bar',
+        label: 'Total de Ocorrências',
+        data: totalMes,
+        yAxisID: 'y'
+    },
+
+    {
+        type: 'line',
+        label: '% de Captura',
+        data: percMes,
+        yAxisID: 'y1',
+        tension: 0.3,
+        fill: false,
+        borderWidth: 3,
+        pointRadius: 5
+    }
+
+]
+    },
+
+    options: {
+
+        responsive: true,
+
+        interaction: {
+            mode: 'index',
+            intersect: false
+        },
+
+        plugins: {
+
+            legend: {
+                position: 'bottom'
+            },
+
+            tooltip: {
+
+                callbacks: {
+
+                    label: function(context) {
+
+                        if (context.dataset.label === '% de Captura') {
+                            return context.raw + '%';
+                        }
+
+                        return context.dataset.label + ': ' + context.raw;
+                    }
+                }
+            }
+        },
+
+        scales: {
+
+            y: {
+
+                position: 'left',
+
+                beginAtZero: true,
+
+                title: {
+                    display: true,
+                    text: 'Quantidade'
+                }
+
+            },
+
+            y1: {
+
+                position: 'right',
+
+                beginAtZero: true,
+
+                min: 0,
+
+                max: 100,
+
+                grid: {
+                    drawOnChartArea: false
+                },
+
+                ticks: {
+                    callback: value => value + '%'
+                },
+
+                title: {
+                    display: true,
+                    text: '% Captura'
+                }
+            }
+        }
+    }
+});
 }
 
 // ============ KPIs ============
