@@ -4,7 +4,6 @@ app.py — Servidor Flask para o painel COR de Ocorrências.
 Fornece API REST com os dados das planilhas e monitora
 automaticamente alterações nos arquivos .xlsx.
 """
-import json
 import os
 import sys
 import threading
@@ -98,6 +97,12 @@ def api_status():
         "ultimo_refresh": _ultimo_refresh,
         "planilhas_dir": str(PLANILHAS_DIR),
     })
+
+
+@app.route("/health")
+def health():
+    """Health check para Render."""
+    return jsonify({"status": "ok", "count": len(get_dados())})
 
 
 # ============================================================

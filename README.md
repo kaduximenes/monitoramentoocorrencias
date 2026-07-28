@@ -18,6 +18,7 @@ Ocorrencias_Espontaneas/
 │   └── app.js                # Lógica + gráficos (Chart.js)
 ├── Planilhas/                # 📊 Pasta monitorada
 │   └── *.xlsx                # Planilhas de ocorrências
+├── render.yaml               # Configuração de deploy Render
 └── README.md
 ```
 
@@ -38,6 +39,33 @@ python backend/app.py
 ### 3. Acessar o painel
 
 Abra o navegador em **http://localhost:5000**
+
+### ☁️ Deploy no Render
+
+O projeto está configurado para deploy como **Web Service** no [Render](https://render.com), que mantém o servidor Flask persistente e o watcher de planilhas ativo.
+
+#### Deploy automático (Blueprint)
+
+1. Conecte o repositório ao Render
+2. O `render.yaml` é detectado automaticamente
+3. Clique em **Apply** — o serviço será criado com todas as configurações
+
+#### Deploy manual
+
+1. Crie um novo **Web Service** no Render
+2. Configure:
+   - **Runtime**: Python 3
+   - **Build Command**: `pip install -r backend/requirements.txt`
+   - **Start Command**: `python backend/app.py`
+   - **Health Check Path**: `/health`
+
+```bash
+# Variáveis de ambiente
+PORT=10000
+DEBUG=0
+```
+
+**Importante**: Para atualizar os dados, substitua o `.xlsx` na pasta `Planilhas/` e faça um novo deploy. O watcher detecta automaticamente mudanças em **produção**, mas novos arquivos só entram via deploy.
 
 ---
 
@@ -93,3 +121,4 @@ O `excel_reader.py` classifica cada ocorrência automaticamente:
 | Backend | Python 3, Flask, openpyxl, watchdog |
 | Frontend | HTML5, CSS3, JavaScript (vanilla), Chart.js 4 |
 | Dados | Excel (.xlsx) — leitura via openpyxl |
+| Deploy | Render (Web Service persistente) |
