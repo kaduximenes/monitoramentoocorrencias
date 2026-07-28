@@ -310,6 +310,7 @@ function renderChips(containerId, field, setObj, colorFn) {
 // ============================================================
 function renderActiveFilters() {
   const el = document.getElementById('active-filters');
+  const hint = document.getElementById('filters-hint');
   const all = [
     ...[...state.meses].map(v => ({ v, type: 'mes' })),
     ...[...state.zonas].map(v => ({ v, type: 'zona' })),
@@ -318,12 +319,12 @@ function renderActiveFilters() {
   ];
 
   if (all.length === 0) {
-    el.innerHTML = `<span style="color:var(--muted-2); font-size:12px;">
-      Nenhum filtro ativo — exibindo todas as ${RAW_DATA.length} ocorrências
-    </span>`;
+    el.innerHTML = '';
+    hint.textContent = `Nenhum filtro ativo — exibindo todas as ${RAW_DATA.length} ocorrências`;
     return;
   }
 
+  hint.textContent = `${all.length} filtro(s) ativo(s)`;
   el.innerHTML = all
     .map(
       ({ v, type }) =>
