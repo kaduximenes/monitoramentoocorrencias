@@ -1,0 +1,100 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>COR • Painel de Ocorrências (Abr–Jun 2026)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <div class="brand-mark">COR</div>
+    <div>
+      <h1>Painel de Ocorrências — Centro de Operações</h1>
+      <div class="subtitle">Monitoramento de alarmes apurado pela Coordenação COR · Abril–Junho 2026</div>
+    </div>
+  </div>
+  <div class="status"><span class="dot"></span> CARREGANDO...</div>
+</header>
+
+<div class="wrap">
+
+  <div class="month-row" id="month-row"></div>
+
+  <div class="kpis" id="kpis"></div>
+
+  <div class="grid-main">
+    <div class="panel">
+      <div class="panel-title" style="margin-bottom:10px;">
+        Indicadores de Captura
+        <span class="tag" id="tag-sidebar"></span>
+      </div>
+      <div class="sidebar-stats" id="sidebar-stats"></div>
+      <hr style="border:none; border-top:1px solid var(--border); margin:12px 0;">
+
+      <div class="panel-title">Zona da cidade <span class="tag">clique para filtrar</span></div>
+      <div class="zonemap" id="zonemap"></div>
+      <div class="other-zones" id="other-zones"></div>
+      <div class="panel-title" style="margin-top:2px;">Tipo de ocorrência</div>
+      <div class="chip-row" id="cat-chips"></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">
+        Filtros ativos
+        <button class="reset-btn" id="reset-btn">limpar filtros ↺</button>
+      </div>
+      <div class="chip-row" id="active-filters" style="margin-bottom:14px;"></div>
+      <div class="panel-title">Fonte do alarme</div>
+      <div class="chip-row" id="fonte-chips"></div>
+    </div>
+  </div>
+
+  <div class="charts-grid">
+    <div class="panel">
+      <div class="panel-title">Ocorrências por tipo <span class="tag" id="tag-tipo"></span></div>
+      <canvas id="chart-tipo" height="300"></canvas>
+    </div>
+    <div class="panel">
+      <div class="panel-title">Distribuição por zona <span class="tag" id="tag-zona"></span></div>
+      <canvas id="chart-zona" height="250"></canvas>
+    </div>
+    <div class="row2">
+      <div class="panel">
+        <div class="panel-title">Evolução diária <span class="tag" id="tag-dia"></span></div>
+        <canvas id="chart-dia" height="240"></canvas>
+      </div>
+      <div class="panel">
+        <div class="panel-title">Equipes com mais ocorrências</div>
+        <canvas id="chart-equipe" height="240"></canvas>
+      </div>
+      <div class="panel">
+        <div class="panel-title">Efetividade de Captura por Mês</div>
+        <canvas id="chart-captura-mes" height="240"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">Registro de ocorrências <span class="tag" id="tag-log"></span></div>
+    <div class="log-wrap">
+      <div class="table-scroll">
+      <table>
+        <thead><tr><th style="width:36px;">Qte</th><th style="width:64px;">Mês</th><th style="width:56px;">Data</th><th>Ocorrência</th><th style="width:110px;">Zona</th><th>Endereço</th><th style="width:140px;">Equipe</th></tr></thead>
+        <tbody id="log-body"></tbody>
+      </table>
+      </div>
+    </div>
+  </div>
+
+  <footer>COR · painel gerado a partir das planilhas de monitoramento de alarmes (abr/mai/jun 2026) · dados internos</footer>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
