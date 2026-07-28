@@ -304,6 +304,26 @@ h1 {
   font-family: 'IBM Plex Mono', monospace;
 }
 
+.panel-title-tight {
+  margin-bottom: 10px;
+}
+
+.panel-title-gap {
+  margin-top: 10px;
+}
+
+.panel-gap {
+  margin-bottom: clamp(12px, 1.4vw, 20px);
+}
+
+/* ── Sidebar divider ── */
+
+.sidebar-divider {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 12px 0;
+}
+
 .panel {
   background: var(--panel);
   border: 1px solid var(--border);
@@ -526,6 +546,7 @@ h1 {
   border: 1px solid var(--border);
   color: var(--muted);
   cursor: pointer;
+  -webkit-user-select: none;
   user-select: none;
   background: var(--panel-2);
   transition: all .12s ease;
@@ -581,7 +602,6 @@ canvas {
 
 .table-scroll {
   overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
   border: 1px solid var(--border);
   border-radius: 8px;
 }
@@ -606,6 +626,12 @@ thead th {
   text-transform: uppercase;
   letter-spacing: 0.4px;
 }
+
+.col-qte { width: 36px; }
+.col-mes { width: 64px; }
+.col-data { width: 56px; }
+.col-zona { width: 110px; }
+.col-equipe { width: 140px; }
 
 tbody td {
   padding: 7px 10px;
