@@ -561,7 +561,7 @@ function renderCapturaMes() {
       datasets: [
         {
           type: 'bar',
-          label: 'Total de Ocorrências',
+          label: 'Total de Ocorrências capturadas',
           data: totalMes,
           yAxisID: 'y',
           backgroundColor: 'rgba(242,169,59,0.25)',
@@ -665,7 +665,7 @@ function renderKPIs() {
 
   const cards = [
     {
-      label: 'Total de ocorrências',
+      label: 'Total de ocorrências capturadas',
       value: total,
       sub: hasFilter
         ? 'com filtros aplicados'
