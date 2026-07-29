@@ -9,7 +9,11 @@
 // ============================================================
 // Configuração da API
 // ============================================================
-const API_BASE = window.location.origin;
+// Quando servido pelo Flask, usa a mesma origem.
+// Quando aberto via file://, tenta localhost:5000.
+const API_BASE = window.location.protocol === 'file:'
+  ? 'http://localhost:5000'
+  : window.location.origin;
 
 // ============================================================
 // Design tokens
@@ -88,11 +92,32 @@ async function init() {
 
   } catch (err) {
     console.error('[APP] Erro ao carregar dados:', err);
-    document.querySelector('.status').innerHTML =
-      `<span class="dot" style="background:var(--red);"></span> ERRO AO CARREGAR`;
-    document.querySelector('.status').style.color = 'var(--red)';
-    document.querySelector('.status').style.borderColor = 'rgba(232,99,107,0.3)';
-    document.querySelector('.status').style.background = 'rgba(232,99,107,0.08)';
+    const statusEl = document.querySelector('.status');
+    statusEl.innerHTML =
+      `<span class="dot" style="background:var(--red);"></span> SEM CONEXÃO`;
+    statusEl.style.color = 'var(--red)';
+    statusEl.style.borderColor = 'rgba(232,99,107,0.3)';
+    statusEl.style.background = 'rgba(232,99,107,0.08)';
+
+    // Mostra mensagem amigável no corpo
+    document.querySelector('.wrap').innerHTML = `
+      <div style="text-align:center; padding:60px 20px; max-width:520px; margin:0 auto;">
+        <div style="font-family:'Space Grotesk',sans-serif; font-size:20px; color:var(--text); margin-bottom:12px;">
+          ⚠️ Backend não encontrado
+        </div>
+        <div style="color:var(--muted); font-size:13px; line-height:1.7;">
+          O servidor Flask precisa estar rodando para carregar os dados.<br>
+          Execute no terminal:
+        </div>
+        <div style="background:var(--panel); border:1px solid var(--border); border-radius:6px;
+                    padding:12px 18px; margin:16px 0; font-family:'IBM Plex Mono',monospace;
+                    font-size:13px; color:var(--teal);">
+          python backend/app.py
+        </div>
+        <div style="color:var(--muted-2); font-size:11.5px;">
+          Depois acesse <span style="color:var(--blue);">http://localhost:5000</span>
+        </div>
+      </div>`;
   }
 }
 
