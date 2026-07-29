@@ -2,22 +2,96 @@
    style.css — Painel COR de Ocorrências
    ============================================================ */
 
+/* ── Cera Pro (TypeMates) ── */
+@font-face {
+  font-family: 'Cera Pro';
+  src: url('fonts/Cera Pro Thin.otf') format('opentype');
+  font-weight: 100;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Cera Pro';
+  src: url('fonts/Cera Pro Thin Italic.otf') format('opentype');
+  font-weight: 100;
+  font-style: italic;
+}
+@font-face {
+  font-family: 'Cera Pro';
+  src: url('fonts/Cera Pro Light.otf') format('opentype');
+  font-weight: 300;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Cera Pro';
+  src: url('fonts/Cera Pro Light Italic.otf') format('opentype');
+  font-weight: 300;
+  font-style: italic;
+}
+@font-face {
+  font-family: 'Cera Pro';
+  src: url('fonts/Cera Pro Regular.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Cera Pro';
+  src: url('fonts/Cera Pro Regular Italic.otf') format('opentype');
+  font-weight: 400;
+  font-style: italic;
+}
+@font-face {
+  font-family: 'Cera Pro';
+  src: url('fonts/Cera Pro Medium.otf') format('opentype');
+  font-weight: 500;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Cera Pro';
+  src: url('fonts/Cera Pro Medium Italic.otf') format('opentype');
+  font-weight: 500;
+  font-style: italic;
+}
+@font-face {
+  font-family: 'Cera Pro';
+  src: url('fonts/Cera Pro Bold.otf') format('opentype');
+  font-weight: 700;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Cera Pro';
+  src: url('fonts/Cera Pro Bold Italic.otf') format('opentype');
+  font-weight: 700;
+  font-style: italic;
+}
+@font-face {
+  font-family: 'Cera Pro';
+  src: url('fonts/Cera Pro Black.otf') format('opentype');
+  font-weight: 900;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Cera Pro';
+  src: url('fonts/Cera Pro Black Italic.otf') format('opentype');
+  font-weight: 900;
+  font-style: italic;
+}
+
 :root {
-  --bg: #0A121C;
-  --bg-grid: #0D1826;
-  --panel: #111E2E;
-  --panel-2: #0E1A28;
-  --border: #1C2E42;
-  --border-soft: #162434;
-  --text: #E7EDF5;
-  --muted: #7E8FA6;
-  --muted-2: #54637A;
-  --amber: #F2A93B;
-  --teal: #33C9B8;
+  --bg: #0F1E33;
+  --bg-grid: #12253D;
+  --panel: #142B47;
+  --panel-2: #0F233A;
+  --border: #1A3557;
+  --border-soft: #152D4A;
+  --text: #ECEDED;
+  --muted: #8BA4C0;
+  --muted-2: #5A7A9E;
+  --amber: #42B9EB;
+  --teal: #2A688F;
   --red: #E8636B;
   --violet: #8E8CF0;
-  --blue: #4C8DF0;
-  --ok: #33C9B8;
+  --blue: #2A688F;
+  --ok: #42B9EB;
 }
 
 * {
@@ -32,7 +106,7 @@ html, body {
 }
 
 body {
-  font-family: 'Inter', sans-serif;
+  font-family: 'Cera Pro', sans-serif;
   background-image:
     linear-gradient(var(--bg-grid) 1px, transparent 1px),
     linear-gradient(90deg, var(--bg-grid) 1px, transparent 1px);
@@ -42,11 +116,11 @@ body {
 }
 
 .mono {
-  font-family: 'IBM Plex Mono', monospace;
+  font-family: 'Cera Pro', monospace;
 }
 
 .display {
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: 'Cera Pro', sans-serif;
 }
 
 /* ── Header ── */
@@ -71,11 +145,11 @@ header {
   width: 40px;
   height: 40px;
   border-radius: 8px;
-  background: linear-gradient(135deg, var(--amber), #C97A1D);
+  background: linear-gradient(135deg, var(--amber), #2A688F);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: 'Cera Pro', sans-serif;
   font-weight: 700;
   color: #0A121C;
   font-size: 15px;
@@ -83,7 +157,7 @@ header {
 }
 
 h1 {
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: 'Cera Pro', sans-serif;
   font-size: 20px;
   margin: 0;
   letter-spacing: 0.2px;
@@ -99,11 +173,11 @@ h1 {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-family: 'IBM Plex Mono', monospace;
+  font-family: 'Cera Pro', monospace;
   font-size: 11.5px;
   color: var(--ok);
-  background: rgba(51, 201, 184, 0.08);
-  border: 1px solid rgba(51, 201, 184, 0.3);
+  background: rgba(66, 185, 235, 0.08);
+  border: 1px solid rgba(66, 185, 235, 0.3);
   padding: 6px 12px;
   border-radius: 20px;
 }
@@ -113,7 +187,7 @@ h1 {
   height: 7px;
   border-radius: 50%;
   background: var(--ok);
-  box-shadow: 0 0 0 3px rgba(51, 201, 184, 0.2);
+  box-shadow: 0 0 0 3px rgba(66, 185, 235, 0.2);
   animation: pulse 2s infinite;
 }
 
@@ -141,7 +215,7 @@ h1 {
 }
 
 .month-chip {
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: 'Cera Pro', sans-serif;
   font-weight: 600;
   font-size: 13px;
   padding: 9px 18px;
@@ -160,12 +234,12 @@ h1 {
 
 .month-chip.active {
   background: var(--amber);
-  color: #1a1206;
+  color: #0C1A2D;
   border-color: var(--amber);
 }
 
 .month-chip .cnt {
-  font-family: 'IBM Plex Mono', monospace;
+  font-family: 'Cera Pro', monospace;
   font-weight: 400;
   opacity: .75;
   margin-left: 6px;
@@ -208,7 +282,7 @@ h1 {
 }
 
 .kpi-value {
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: 'Cera Pro', sans-serif;
   font-size: 26px;
   font-weight: 700;
   margin-top: 6px;
@@ -218,7 +292,7 @@ h1 {
   font-size: 11.5px;
   color: var(--muted-2);
   margin-top: 4px;
-  font-family: 'IBM Plex Mono', monospace;
+  font-family: 'Cera Pro', monospace;
 }
 
 /* ── Filters bar (horizontal, compacta) ── */
@@ -237,7 +311,7 @@ h1 {
 }
 
 .filters-bar-label {
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: 'Cera Pro', sans-serif;
   font-size: 12px;
   font-weight: 600;
   color: var(--muted);
@@ -248,7 +322,7 @@ h1 {
 .filters-bar-hint {
   font-size: 11.5px;
   color: var(--muted-2);
-  font-family: 'IBM Plex Mono', monospace;
+  font-family: 'Cera Pro', monospace;
   flex: 1;
   min-width: 0;
 }
@@ -287,7 +361,7 @@ h1 {
 }
 
 .panel-title {
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: 'Cera Pro', sans-serif;
   font-size: 13.5px;
   font-weight: 600;
   color: var(--text);
@@ -301,7 +375,7 @@ h1 {
   font-size: 10.5px;
   color: var(--muted);
   font-weight: 400;
-  font-family: 'IBM Plex Mono', monospace;
+  font-family: 'Cera Pro', monospace;
 }
 
 .panel-title-tight {
@@ -384,11 +458,11 @@ h1 {
   color: var(--muted-2);
   text-transform: uppercase;
   letter-spacing: 0.3px;
-  font-family: 'IBM Plex Mono', monospace;
+  font-family: 'Cera Pro', monospace;
 }
 
 .sidebar-stat-month .mval {
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: 'Cera Pro', sans-serif;
   font-size: 16px;
   font-weight: 700;
   margin-top: 1px;
@@ -398,7 +472,7 @@ h1 {
 .sidebar-stat-month .msub {
   font-size: 9.5px;
   color: var(--muted-2);
-  font-family: 'IBM Plex Mono', monospace;
+  font-family: 'Cera Pro', monospace;
 }
 
 .sidebar-divider {
@@ -436,7 +510,7 @@ h1 {
 }
 
 .sidebar-perc-row .spr-val {
-  font-family: 'IBM Plex Mono', monospace;
+  font-family: 'Cera Pro', monospace;
   font-size: 11px;
   font-weight: 600;
   min-width: 48px;
@@ -476,11 +550,11 @@ h1 {
 .zcell .zname {
   font-size: 11.5px;
   font-weight: 600;
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: 'Cera Pro', sans-serif;
 }
 
 .zcell .zcount {
-  font-family: 'IBM Plex Mono', monospace;
+  font-family: 'Cera Pro', monospace;
   font-size: 20px;
   font-weight: 600;
   margin-top: 2px;
@@ -559,7 +633,7 @@ h1 {
 
 .chip.active {
   background: var(--amber);
-  color: #1a1206;
+  color: #0C1A2D;
   border-color: var(--amber);
   font-weight: 600;
 }
@@ -653,7 +727,7 @@ tbody tr:hover {
   padding: 2px 8px;
   border-radius: 10px;
   font-size: 10.5px;
-  font-family: 'IBM Plex Mono', monospace;
+  font-family: 'Cera Pro', monospace;
   white-space: nowrap;
 }
 
@@ -671,7 +745,7 @@ footer {
   color: var(--muted-2);
   font-size: 11px;
   padding: 18px 0 6px;
-  font-family: 'IBM Plex Mono', monospace;
+  font-family: 'Cera Pro', monospace;
 }
 
 /* ── Reset button ── */
@@ -680,7 +754,7 @@ button.reset-btn {
   background: transparent;
   border: 1px solid var(--border);
   color: var(--muted);
-  font-family: 'IBM Plex Mono', monospace;
+  font-family: 'Cera Pro', monospace;
   font-size: 11px;
   padding: 6px 12px;
   border-radius: 6px;
