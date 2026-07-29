@@ -19,23 +19,23 @@ const API_BASE = window.location.protocol === 'file:'
 // Design tokens
 // ============================================================
 const ZONE_COLOR = {
-  'Zona Norte': '#2A688F',
-  'Zona Sul': '#42B9EB',
-  'Zona Oeste': '#42B9EB',
+  'Zona Norte': '#4C8DF0',
+  'Zona Sul': '#33C9B8',
+  'Zona Oeste': '#F2A93B',
   'Centro': '#8E8CF0',
   'Não identificado': '#54637A',
   'Fora do Município / Rodovia': '#B08968',
 };
 const CAT_COLOR = {
   'Acidente de trânsito': '#E8636B',
-  'Enguiço de veículo': '#42B9EB',
-  'Operação Policial': '#2A688F',
+  'Enguiço de veículo': '#F2A93B',
+  'Operação Policial': '#4C8DF0',
   'Atropelamento': '#E85D5D',
   'Manutenção na via': '#8E8CF0',
   'Queda de moto/veículo': '#D98CD9',
   'Queda de carga na via': '#C97AE0',
   'Incêndio': '#FF7A45',
-  'Ocorrência CBMERJ': '#42B9EB',
+  'Ocorrência CBMERJ': '#33C9B8',
   'Capotamento de veículo': '#E0A83B',
   'Obra na via': '#6FA8DC',
   'Semáforo apagado': '#F2D43B',
@@ -485,12 +485,12 @@ function renderCharts() {
       datasets: [
         {
           data: diaLabels.map(d => diaCounts[d] || 0),
-          borderColor: '#42B9EB',
-          backgroundColor: 'rgba(66,185,235,0.12)',
+          borderColor: '#F2A93B',
+          backgroundColor: 'rgba(242,169,59,0.12)',
           fill: true,
           tension: 0.3,
           pointRadius: 2,
-          pointBackgroundColor: '#42B9EB',
+          pointBackgroundColor: '#F2A93B',
         },
       ],
     },
@@ -525,7 +525,7 @@ function renderCharts() {
       datasets: [
         {
           data: eqSorted.map(x => x[1]),
-          backgroundColor: '#2A688F',
+          backgroundColor: '#4C8DF0',
           borderRadius: 4,
           maxBarThickness: 50,
           categoryPercentage: 0.7,
@@ -564,8 +564,8 @@ function renderCapturaMes() {
           label: 'Total de Ocorrências capturadas',
           data: totalMes,
           yAxisID: 'y',
-          backgroundColor: 'rgba(66,185,235,0.25)',
-          borderColor: '#42B9EB',
+          backgroundColor: 'rgba(242,169,59,0.25)',
+          borderColor: '#F2A93B',
           borderWidth: 1,
           borderRadius: 4,
           maxBarThickness: 80,
@@ -579,11 +579,11 @@ function renderCapturaMes() {
           yAxisID: 'y1',
           tension: 0.3,
           fill: false,
-          borderColor: '#42B9EB',
-          backgroundColor: '#42B9EB',
+          borderColor: '#33C9B8',
+          backgroundColor: '#33C9B8',
           borderWidth: 3,
           pointRadius: 5,
-          pointBackgroundColor: '#42B9EB',
+          pointBackgroundColor: '#33C9B8',
         },
       ],
     },
@@ -670,7 +670,7 @@ function renderKPIs() {
       sub: hasFilter
         ? 'com filtros aplicados'
         : `de ${RAW_DATA.length} registradas (abr–jun)`,
-      accent: '#42B9EB',
+      accent: '#F2A93B',
     },
     {
       label: 'Zona mais afetada',
@@ -688,7 +688,7 @@ function renderKPIs() {
       label: 'Mês com mais registros',
       value: topMes ? topMes[0] : '—',
       sub: topMes ? `${topMes[1]} ocorrências` : '',
-      accent: '#42B9EB',
+      accent: '#33C9B8',
     },
   ];
 
