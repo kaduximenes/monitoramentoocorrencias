@@ -15,6 +15,7 @@ Estrutura real da planilha (colunas 0-indexed):
   9 (J): Valor ABRIL (sumário) / label de mês
   10 (K): Valor MAIO (sumário)
   11 (L): Valor JUNHO (sumário)
+  12 (M): Valor JULHO (sumário) — opcional
 """
 import re
 from datetime import datetime
@@ -26,6 +27,8 @@ import openpyxl
 
 # --- Caminho da pasta de planilhas ---
 PLANILHAS_DIR = Path(__file__).resolve().parent.parent / "Planilhas"
+
+MESES_STATS = ["Abril", "Maio", "Junho", "Julho"]
 
 MESES_MAP = {
     4: "Abril", 5: "Maio", 6: "Junho",
@@ -190,13 +193,13 @@ def extrair_dados_xlsx(caminho: Path) -> tuple[list[dict], dict]:
     dados = []
     sidebar_stats = {
         "registradas": {"label": "Total registradas", "accent": "#F2A93B",
-                        "months": {"Abril": 0, "Maio": 0, "Junho": 0}},
+                        "months": {m: 0 for m in MESES_STATS}},
         "capturadas": {"label": "Total capturadas por alarmes", "accent": "#33C9B8",
-                       "months": {"Abril": 0, "Maio": 0, "Junho": 0}},
+                       "months": {m: 0 for m in MESES_STATS}},
         "pctCaptura": {"label": "% de captura", "accent": "#4C8DF0",
-                       "months": {"Abril": 0, "Maio": 0, "Junho": 0}},
+                       "months": {m: 0 for m in MESES_STATS}},
         "recebidas": {"label": "% recebidas (não capturadas)", "accent": "#7E8FA6",
-                      "months": {"Abril": 0, "Maio": 0, "Junho": 0}},
+                      "months": {m: 0 for m in MESES_STATS}},
     }
 
     seq = 0
@@ -214,6 +217,7 @@ def extrair_dados_xlsx(caminho: Path) -> tuple[list[dict], dict]:
         col_j = row[9] if len(row) > 9 else None
         col_k = row[10] if len(row) > 10 else None
         col_l = row[11] if len(row) > 11 else None
+        col_m = row[12] if len(row) > 12 else None  # Julho (opcional)
 
         # Linha de sumário?
         if col_i and isinstance(col_i, str):
@@ -223,25 +227,26 @@ def extrair_dados_xlsx(caminho: Path) -> tuple[list[dict], dict]:
                     "Abril": float(str(col_j).replace(",", ".")) if col_j else 0,
                     "Maio": float(str(col_k).replace(",", ".")) if col_k else 0,
                     "Junho": float(str(col_l).replace(",", ".")) if col_l else 0,
+                    "Julho": float(str(col_m).replace(",", ".")) if col_m else 0,
                 }
             except (ValueError, TypeError):
                 continue
 
             if "registradas" in label and "%" not in label and "captur" not in label:
-                for m in ["Abril", "Maio", "Junho"]:
+                for m in MESES_STATS:
                     sidebar_stats["registradas"]["months"][m] = int(vals[m])
             elif "capturadas" in label or "captur" in label:
                 # Pode ser contagem (valores > 1) ou percentual (valores < 1)
-                if vals["Abril"] < 1:
+                if 0 < vals["Abril"] < 1:
                     # Percentual de captura
-                    for m in ["Abril", "Maio", "Junho"]:
+                    for m in MESES_STATS:
                         sidebar_stats["pctCaptura"]["months"][m] = round(vals[m] * 100, 2)
                 else:
                     # Contagem de capturadas
-                    for m in ["Abril", "Maio", "Junho"]:
+                    for m in MESES_STATS:
                         sidebar_stats["capturadas"]["months"][m] = int(vals[m])
             elif "recebidas" in label:
-                for m in ["Abril", "Maio", "Junho"]:
+                for m in MESES_STATS:
                     sidebar_stats["recebidas"]["months"][m] = round(vals[m] * 100, 2)
             continue
 
@@ -293,13 +298,13 @@ def carregar_todas_planilhas() -> tuple[list[dict], dict]:
     todos_dados = []
     stats_final = {
         "registradas": {"label": "Total registradas", "accent": "#F2A93B",
-                        "months": {"Abril": 0, "Maio": 0, "Junho": 0}},
+                        "months": {m: 0 for m in MESES_STATS}},
         "capturadas": {"label": "Total capturadas por alarmes", "accent": "#33C9B8",
-                       "months": {"Abril": 0, "Maio": 0, "Junho": 0}},
+                       "months": {m: 0 for m in MESES_STATS}},
         "pctCaptura": {"label": "% de captura", "accent": "#4C8DF0",
-                       "months": {"Abril": 0, "Maio": 0, "Junho": 0}},
+                       "months": {m: 0 for m in MESES_STATS}},
         "recebidas": {"label": "% recebidas (não capturadas)", "accent": "#7E8FA6",
-                      "months": {"Abril": 0, "Maio": 0, "Junho": 0}},
+                      "months": {m: 0 for m in MESES_STATS}},
     }
 
     arquivos = sorted(PLANILHAS_DIR.glob("*.xlsx"))
@@ -308,7 +313,7 @@ def carregar_todas_planilhas() -> tuple[list[dict], dict]:
             dados, stats = extrair_dados_xlsx(arq)
             todos_dados.extend(dados)
             for key in stats_final:
-                for m in ["Abril", "Maio", "Junho"]:
+                for m in MESES_STATS:
                     if stats[key]["months"][m]:
                         stats_final[key]["months"][m] = stats[key]["months"][m]
         except Exception as e:

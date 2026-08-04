@@ -3,7 +3,16 @@ app.py — Servidor Flask para o painel COR de Ocorrências.
 
 Fornece API REST com os dados das planilhas e monitora
 automaticamente alterações nos arquivos .xlsx.
+
+Endpoints:
+  GET  /api/dados     — todos os registros
+  GET  /api/stats     — indicadores de captura (sidebar)
+  POST /api/refresh   — força recarregamento
+  GET  /api/status    — status do servidor
+  GET  /health        — health check (Render)
 """
+import hashlib
+import json
 import os
 import sys
 import threading
@@ -11,7 +20,7 @@ import time
 from pathlib import Path
 
 from dotenv import load_dotenv
-from flask import Flask, jsonify, send_from_directory
+from flask import Flask, jsonify, request, send_from_directory, make_response
 from flask_cors import CORS
 
 # Carrega variáveis do arquivo .env
@@ -30,15 +39,23 @@ _dados_cache: list[dict] = []
 _stats_cache: dict = {}
 _cache_lock = threading.Lock()
 _ultimo_refresh: float = 0.0
+_etag: str = ""
+
+
+def _compute_etag(dados: list[dict], stats: dict) -> str:
+    """Gera um hash ETag baseado nos dados + stats para cache HTTP."""
+    payload = json.dumps({"d": len(dados), "s": stats}, sort_keys=True, default=str)
+    return hashlib.sha256(payload.encode()).hexdigest()[:16]
 
 
 def refresh_dados():
     """Recarrega os dados das planilhas no cache."""
-    global _dados_cache, _stats_cache, _ultimo_refresh
+    global _dados_cache, _stats_cache, _ultimo_refresh, _etag
     with _cache_lock:
         _dados_cache, _stats_cache = carregar_todas_planilhas()
         _ultimo_refresh = time.time()
-    print(f"[APP] Dados recarregados: {len(_dados_cache)} registros")
+        _etag = _compute_etag(_dados_cache, _stats_cache)
+    print(f"[APP] Dados recarregados: {len(_dados_cache)} registros | ETag: {_etag}")
 
 
 def get_dados() -> list[dict]:
@@ -53,6 +70,18 @@ def get_stats() -> dict:
         return dict(_stats_cache)
 
 
+def get_etag() -> str:
+    """Retorna o ETag atual (thread-safe)."""
+    with _cache_lock:
+        return _etag
+
+
+def _check_etag() -> bool:
+    """Verifica se o cliente já tem a versão mais recente (HTTP 304)."""
+    if_none_match = request.headers.get("If-None-Match", "")
+    return if_none_match and if_none_match == get_etag()
+
+
 # ============================================================
 # Rotas da API
 # ============================================================
@@ -60,42 +89,59 @@ def get_stats() -> dict:
 @app.route("/api/dados")
 def api_dados():
     """Retorna todos os registros de ocorrências."""
-    return jsonify(get_dados())
+    if _check_etag():
+        return make_response("", 304)
+
+    response = make_response(jsonify(get_dados()))
+    response.headers["ETag"] = get_etag()
+    response.headers["Cache-Control"] = "no-cache"
+    return response
 
 
 @app.route("/api/stats")
 def api_stats():
     """Retorna os indicadores de captura (sidebar) lidos da planilha."""
+    if _check_etag():
+        return make_response("", 304)
+
     stats = get_stats()
     if not stats or not stats.get("registradas", {}).get("months", {}).get("Abril"):
         # Fallback para valores padrão se a planilha não tiver sumários
-        return jsonify({
+        stats = {
             "registradas": {"label": "Total registradas", "accent": "#F2A93B",
-                            "months": {"Abril": 2286, "Maio": 2019, "Junho": 1877}},
+                            "months": {"Abril": 2286, "Maio": 2019, "Junho": 1877, "Julho": 0}},
             "capturadas": {"label": "Total capturadas por alarmes", "accent": "#33C9B8",
-                           "months": {"Abril": 273, "Maio": 472, "Junho": 257}},
+                           "months": {"Abril": 273, "Maio": 472, "Junho": 257, "Julho": 0}},
             "pctCaptura": {"label": "% de captura", "accent": "#4C8DF0",
-                           "months": {"Abril": 11.94, "Maio": 23.38, "Junho": 13.69}},
+                           "months": {"Abril": 11.94, "Maio": 23.38, "Junho": 13.69, "Julho": 0}},
             "recebidas": {"label": "% recebidas (não capturadas)", "accent": "#7E8FA6",
-                          "months": {"Abril": 88.05, "Maio": 76.62, "Junho": 86.30}},
-        })
-    return jsonify(stats)
+                          "months": {"Abril": 88.05, "Maio": 76.62, "Junho": 86.30, "Julho": 0}},
+        }
+
+    response = make_response(jsonify(stats))
+    response.headers["ETag"] = get_etag()
+    response.headers["Cache-Control"] = "no-cache"
+    return response
 
 
 @app.route("/api/refresh", methods=["POST"])
 def api_refresh():
     """Força o recarregamento imediato dos dados da planilha."""
     refresh_dados()
-    return jsonify({"ok": True, "count": len(get_dados())})
+    return jsonify({"ok": True, "count": len(get_dados()), "etag": get_etag()})
 
 
 @app.route("/api/status")
 def api_status():
     """Status do servidor: quantidade de registros e timestamp do último refresh."""
+    with _cache_lock:
+        ultimo = _ultimo_refresh
     return jsonify({
         "count": len(get_dados()),
-        "ultimo_refresh": _ultimo_refresh,
+        "ultimo_refresh": ultimo,
+        "ultimo_refresh_iso": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(ultimo)) if ultimo else None,
         "planilhas_dir": str(PLANILHAS_DIR),
+        "etag": get_etag(),
     })
 
 
@@ -103,6 +149,18 @@ def api_status():
 def health():
     """Health check para Render."""
     return jsonify({"status": "ok", "count": len(get_dados())})
+
+
+@app.after_request
+def add_no_cache_headers(response):
+    """Adiciona headers para evitar cache de arquivos estáticos no navegador."""
+    if request.path.startswith('/api/'):
+        return response  # API já tem seus próprios headers
+    # Força o navegador a sempre validar HTML, JS, CSS
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
 
 
 # ============================================================

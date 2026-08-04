@@ -1,9 +1,15 @@
 /**
- * app.js — Painel COR de Ocorrências (Abr–Jun 2026)
+ * app.js — Painel COR de Ocorrências (Abr–Jul 2026)
  *
  * Busca os dados do backend via API REST e renderiza o dashboard.
  * O backend monitora a planilha automaticamente — ao recarregar a
  * página (F5) os dados mais recentes serão exibidos.
+ *
+ * Novidades:
+ *  - Busca em tempo real na tabela de registros
+ *  - Paginação da tabela (50 registros por página)
+ *  - Botão de refresh manual dos dados
+ *  - Auto-refresh configurável (padrão: 60s)
  */
 
 // ============================================================
@@ -14,6 +20,9 @@
 const API_BASE = window.location.protocol === 'file:'
   ? 'http://localhost:5000'
   : window.location.origin;
+
+// Intervalo de auto-refresh em segundos (0 = desabilitado)
+const AUTO_REFRESH_INTERVAL = 60;
 
 // ============================================================
 // Design tokens
@@ -63,10 +72,30 @@ const state = {
   fontes: new Set(),
 };
 
+// Controle de busca e paginação
+let searchQuery = '';
+let logPage = 1;
+const LOG_PAGE_SIZE = 50;
+let autoRefreshTimer = null;
+
 // ============================================================
 // Inicialização — carrega dados da API
 // ============================================================
 async function init() {
+  await loadData();
+  setupEventListeners();
+  startAutoRefresh();
+}
+
+async function loadData() {
+  const statusEl = document.getElementById('status-badge');
+  const refreshBtn = document.getElementById('refresh-btn');
+
+  if (refreshBtn) {
+    refreshBtn.classList.add('loading');
+    refreshBtn.textContent = '⟳ Carregando...';
+  }
+
   try {
     const [dadosRes, statsRes] = await Promise.all([
       fetch(`${API_BASE}/api/dados`),
@@ -87,17 +116,22 @@ async function init() {
     });
 
     render();
-    document.querySelector('.status').innerHTML =
+    statusEl.innerHTML =
       `<span class="dot"></span> ${RAW_DATA.length} REGISTROS · API`;
 
   } catch (err) {
     console.error('[APP] Erro ao carregar dados:', err);
-    const statusEl = document.querySelector('.status');
     statusEl.innerHTML =
       `<span class="dot" style="background:var(--red);"></span> SEM CONEXÃO`;
     statusEl.style.color = 'var(--red)';
     statusEl.style.borderColor = 'rgba(232,99,107,0.3)';
     statusEl.style.background = 'rgba(232,99,107,0.08)';
+
+    // Se já temos dados em cache, mantém o dashboard
+    if (RAW_DATA.length > 0) {
+      console.log('[APP] Usando dados em cache...');
+      return;
+    }
 
     // Mostra mensagem amigável no corpo
     document.querySelector('.wrap').innerHTML = `
@@ -110,7 +144,7 @@ async function init() {
           Execute no terminal:
         </div>
         <div style="background:var(--panel); border:1px solid var(--border); border-radius:6px;
-                    padding:12px 18px; margin:16px 0; font-family:'Cera Pro',monospace;
+                    padding:12px 18px; margin:16px 0; font-family:'IBM Plex Mono',monospace;
                     font-size:13px; color:var(--teal);">
           python backend/app.py
         </div>
@@ -118,6 +152,73 @@ async function init() {
           Depois acesse <span style="color:var(--blue);">http://localhost:5000</span>
         </div>
       </div>`;
+  } finally {
+    if (refreshBtn) {
+      refreshBtn.classList.remove('loading');
+      refreshBtn.textContent = '⟳ Atualizar dados';
+    }
+  }
+}
+
+function startAutoRefresh() {
+  if (AUTO_REFRESH_INTERVAL > 0) {
+    autoRefreshTimer = setInterval(async () => {
+      console.log('[APP] Auto-refresh...');
+      await loadData();
+    }, AUTO_REFRESH_INTERVAL * 1000);
+    console.log(`[APP] Auto-refresh configurado: ${AUTO_REFRESH_INTERVAL}s`);
+  }
+}
+
+async function manualRefresh() {
+  // Também força refresh no backend
+  try {
+    await fetch(`${API_BASE}/api/refresh`, { method: 'POST' });
+  } catch (e) {
+    // ignora se falhar, tenta carregar dados mesmo assim
+  }
+  await loadData();
+}
+
+function setupEventListeners() {
+  // Reset filters
+  document.getElementById('reset-btn').addEventListener('click', () => {
+    state.meses.clear();
+    state.zonas.clear();
+    state.categorias.clear();
+    state.fontes.clear();
+    searchQuery = '';
+    logPage = 1;
+    const searchInput = document.getElementById('log-search');
+    if (searchInput) searchInput.value = '';
+    render();
+  });
+
+  // Refresh button
+  const refreshBtn = document.getElementById('refresh-btn');
+  if (refreshBtn) {
+    refreshBtn.addEventListener('click', manualRefresh);
+  }
+
+  // Search input
+  const searchInput = document.getElementById('log-search');
+  const searchClear = document.getElementById('search-clear');
+  if (searchInput) {
+    searchInput.addEventListener('input', (e) => {
+      searchQuery = e.target.value.trim().toLowerCase();
+      logPage = 1;
+      if (searchClear) searchClear.style.display = searchQuery ? 'block' : 'none';
+      renderLog();
+    });
+  }
+  if (searchClear) {
+    searchClear.addEventListener('click', () => {
+      searchQuery = '';
+      logPage = 1;
+      if (searchInput) searchInput.value = '';
+      searchClear.style.display = 'none';
+      renderLog();
+    });
   }
 }
 
@@ -707,27 +808,53 @@ function renderKPIs() {
 }
 
 // ============================================================
-// Log table
+// Log table (com busca e paginação)
 // ============================================================
 function renderLog() {
   const mesIdx = { Abril: 4, Maio: 5, Junho: 6, Julho: 7 };
-  const data = filteredData().sort(
+  let data = filteredData().sort(
     (a, b) =>
       (mesIdx[a.Mes] - mesIdx[b.Mes]) ||
       (a.Dia - b.Dia) ||
       (a.QTE - b.QTE)
   );
-  const body = document.getElementById('log-body');
-  document.getElementById('tag-log').textContent = `${data.length} registros`;
 
-  if (data.length === 0) {
+  // Aplica busca textual
+  if (searchQuery) {
+    data = data.filter(d => {
+      const campos = [
+        d.Endereço, d.Ocorrência, d.Equipe, d.Categoria, d.Zona,
+        d.Mes, d.DataStr, d.Fonte, d['Alarmes utilizados'],
+        d['Agência Validadora'],
+      ];
+      return campos.some(c => c && String(c).toLowerCase().includes(searchQuery));
+    });
+  }
+
+  const totalFiltered = data.length;
+  const totalPages = Math.ceil(totalFiltered / LOG_PAGE_SIZE);
+
+  // Ajusta página atual se necessário
+  if (logPage > totalPages) logPage = Math.max(1, totalPages);
+
+  const startIdx = (logPage - 1) * LOG_PAGE_SIZE;
+  const pageData = data.slice(startIdx, startIdx + LOG_PAGE_SIZE);
+
+  const body = document.getElementById('log-body');
+  document.getElementById('tag-log').textContent =
+    searchQuery
+      ? `${totalFiltered} de ${filteredData().length} registros (busca)`
+      : `${totalFiltered} registros`;
+
+  if (pageData.length === 0) {
     body.innerHTML = `<tr><td colspan="7">
-      <div class="empty-state">Nenhuma ocorrência corresponde aos filtros selecionados.</div>
+      <div class="empty-state">Nenhuma ocorrência corresponde aos filtros ou à busca.</div>
     </td></tr>`;
+    document.getElementById('log-pagination').style.display = 'none';
     return;
   }
 
-  body.innerHTML = data
+  body.innerHTML = pageData
     .map(
       d => `
     <tr>
@@ -735,14 +862,79 @@ function renderLog() {
       <td class="mono">${d.Mes}</td>
       <td class="mono">${d.DataStr}</td>
       <td><span class="badge" style="background:${catColor(d.Categoria)}22; color:${catColor(d.Categoria)};">
-        ${d.Categoria}</span></td>
+        ${highlightMatch(d.Categoria)}</span></td>
       <td><span class="badge" style="background:${zoneColor(d.Zona)}22; color:${zoneColor(d.Zona)};">
-        ${d.Zona}</span></td>
-      <td style="color:var(--muted); font-size:11.5px;">${d.Endereço}</td>
-      <td style="font-size:11px; color:var(--muted-2);">${d.Equipe}</td>
+        ${highlightMatch(d.Zona)}</span></td>
+      <td style="color:var(--muted); font-size:11.5px;">${highlightMatch(d.Endereço)}</td>
+      <td style="font-size:11px; color:var(--muted-2);">${highlightMatch(d.Equipe)}</td>
     </tr>`
     )
     .join('');
+
+  // Paginação
+  renderPagination(totalFiltered, totalPages);
+}
+
+function highlightMatch(text) {
+  if (!searchQuery || !text) return text || '';
+  const escaped = searchQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const regex = new RegExp(`(${escaped})`, 'gi');
+  return String(text).replace(regex, '<mark class="search-highlight">$1</mark>');
+}
+
+function renderPagination(totalFiltered, totalPages) {
+  const pagEl = document.getElementById('log-pagination');
+  if (totalPages <= 1) {
+    pagEl.style.display = 'none';
+    return;
+  }
+
+  pagEl.style.display = 'flex';
+
+  let html = '';
+
+  // Botão Anterior
+  html += `<button ${logPage === 1 ? 'disabled' : ''} data-page="${logPage - 1}">← Anterior</button>`;
+
+  // Páginas
+  const maxButtons = 7;
+  let startPage = Math.max(1, logPage - Math.floor(maxButtons / 2));
+  let endPage = Math.min(totalPages, startPage + maxButtons - 1);
+  if (endPage - startPage < maxButtons - 1) {
+    startPage = Math.max(1, endPage - maxButtons + 1);
+  }
+
+  if (startPage > 1) {
+    html += `<button data-page="1">1</button>`;
+    if (startPage > 2) html += `<span class="page-info">…</span>`;
+  }
+
+  for (let i = startPage; i <= endPage; i++) {
+    html += `<button class="${i === logPage ? 'active-page' : ''}" data-page="${i}">${i}</button>`;
+  }
+
+  if (endPage < totalPages) {
+    if (endPage < totalPages - 1) html += `<span class="page-info">…</span>`;
+    html += `<button data-page="${totalPages}">${totalPages}</button>`;
+  }
+
+  // Botão Próximo
+  html += `<button ${logPage === totalPages ? 'disabled' : ''} data-page="${logPage + 1}">Próximo →</button>`;
+
+  pagEl.innerHTML = html;
+
+  // Event listeners
+  pagEl.querySelectorAll('button[data-page]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const page = parseInt(btn.dataset.page);
+      if (page >= 1 && page <= totalPages) {
+        logPage = page;
+        renderLog();
+        // Scroll to top of log
+        document.querySelector('.log-wrap').scrollTop = 0;
+      }
+    });
+  });
 }
 
 // ============================================================
@@ -758,19 +950,9 @@ function render() {
   renderCharts();
   renderCapturaMes();
   renderKPIs();
+  logPage = 1; // reseta paginação ao mudar filtros
   renderLog();
 }
-
-// ============================================================
-// Event listeners
-// ============================================================
-document.getElementById('reset-btn').addEventListener('click', () => {
-  state.meses.clear();
-  state.zonas.clear();
-  state.categorias.clear();
-  state.fontes.clear();
-  render();
-});
 
 // ============================================================
 // Bootstrap

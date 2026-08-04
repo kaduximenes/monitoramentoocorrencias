@@ -2,9 +2,14 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<title>COR • Painel de Ocorrências </title>
+<title>COR • Painel de Ocorrências</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="stylesheet" href="style.css">
+<meta name="description" content="Painel de monitoramento de ocorrências — Centro de Operações e Resiliência">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'><rect width='40' height='40' rx='8' fill='%232A688F'/><text x='20' y='28' text-anchor='middle' fill='%23ECEDED' font-size='18' font-weight='700' font-family='sans-serif'>COR</text></svg>">
+<!-- Google Fonts (fallback caso Cera Pro não carregue) -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css?v=20260804">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 </head>
 <body>
@@ -17,7 +22,10 @@
       <div class="subtitle">Monitoramento de alarmes apurado pela Coordenação COR · 2026</div>
     </div>
   </div>
-  <div class="status"><span class="dot"></span> CARREGANDO...</div>
+  <div class="header-actions">
+    <button class="refresh-btn" id="refresh-btn" title="Recarregar dados da planilha">⟳ Atualizar dados</button>
+    <div class="status" id="status-badge"><span class="dot"></span> CARREGANDO...</div>
+  </div>
 </header>
 
 <div class="wrap">
@@ -84,7 +92,16 @@
   </div>
 
   <div class="panel">
-    <div class="panel-title">Registro de ocorrências <span class="tag" id="tag-log"></span></div>
+    <div class="panel-title">
+      Registro de ocorrências <span class="tag" id="tag-log"></span>
+    </div>
+    <div class="log-toolbar">
+      <div class="search-box">
+        <svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" id="log-search" placeholder="Buscar por endereço, ocorrência, equipe..." autocomplete="off">
+        <button class="search-clear" id="search-clear" title="Limpar busca" style="display:none;">✕</button>
+      </div>
+    </div>
     <div class="log-wrap">
       <div class="table-scroll">
       <table>
@@ -93,11 +110,12 @@
       </table>
       </div>
     </div>
+    <div class="log-pagination" id="log-pagination" style="display:none;"></div>
   </div>
 
   <footer>COR · painel gerado a partir das planilhas de monitoramento de alarmes · dados internos</footer>
 </div>
 
-<script src="app.js"></script>
+<script src="app.js?v=20260804"></script>
 </body>
 </html>
