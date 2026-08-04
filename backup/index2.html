@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<title>COR • Painel de Ocorrências (Abr–Jun 2026)</title>
+<title>COR • Painel de Ocorrências (Abr–Jul 2026)</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -202,7 +202,7 @@
     <div class="brand-mark">COR</div>
     <div>
       <h1>Painel de Ocorrências — Centro de Operações</h1>
-      <div class="subtitle">Monitoramento de alarmes apurado pela Coordenação COR · Abril–Junho 2026</div>
+      <div class="subtitle">Monitoramento de alarmes apurado pela Coordenação COR · Abril–Julho 2026</div>
     </div>
   </div>
   <div class="status"><span class="dot"></span> DADOS CARREGADOS</div>
@@ -265,7 +265,7 @@
     </div>
   </div>
 
-  <footer>COR · painel gerado a partir das planilhas de monitoramento de alarmes (abr/mai/jun 2026) · dados internos</footer>
+  <footer>COR · painel gerado a partir das planilhas de monitoramento de alarmes (abr/mai/jun/jul 2026) · dados internos</footer>
 </div>
 
 <script>
@@ -519,7 +519,7 @@ function renderKPIs(){
 
   const hasFilter = state.zonas.size||state.categorias.size||state.fontes.size||state.meses.size;
   const cards = [
-    {label:'Total de ocorrências', value: total, sub: hasFilter ? 'com filtros aplicados' : `de ${RAW_DATA.length} registradas (abr–jun)`, accent:'#F2A93B'},
+    {label:'Total de ocorrências', value: total, sub: hasFilter ? 'com filtros aplicados' : `de ${RAW_DATA.length} registradas (abr–jul)`, accent:'#F2A93B'},
     {label:'Zona mais afetada', value: topZona?topZona[0]:'—', sub: topZona?`${topZona[1]} ocorrências`:'', accent: topZona?zoneColor(topZona[0]):'#7E8FA6'},
     {label:'Tipo mais frequente', value: topCat?topCat[0]:'—', sub: topCat?`${topCat[1]} registros`:'', accent: topCat?catColor(topCat[0]):'#7E8FA6'},
     {label:'Mês com mais registros', value: topMes?topMes[0]:'—', sub: topMes?`${topMes[1]} ocorrências`:'', accent:'#33C9B8'},

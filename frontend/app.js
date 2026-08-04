@@ -770,7 +770,7 @@ function renderKPIs() {
       value: total,
       sub: hasFilter
         ? 'com filtros aplicados'
-        : `de ${RAW_DATA.length} registradas (abr–jun)`,
+        : `de ${RAW_DATA.length} registradas (abr–jul)`,
       accent: '#F2A93B',
     },
     {
