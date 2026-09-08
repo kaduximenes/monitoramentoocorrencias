@@ -1,5 +1,5 @@
 /**
- * app.js — Painel COR de Ocorrências (Abr–Jul 2026)
+ * app.js — Painel COR de Ocorrências (Abr–Ago 2026)
  *
  * Busca os dados do backend via API REST e renderiza o dashboard.
  * O backend monitora a planilha automaticamente — ao recarregar a
@@ -811,7 +811,7 @@ function renderKPIs() {
 // Log table (com busca e paginação)
 // ============================================================
 function renderLog() {
-  const mesIdx = { Abril: 4, Maio: 5, Junho: 6, Julho: 7 };
+  const mesIdx = { Abril: 4, Maio: 5, Junho: 6, Julho: 7, Agosto: 8 };
   let data = filteredData().sort(
     (a, b) =>
       (mesIdx[a.Mes] - mesIdx[b.Mes]) ||

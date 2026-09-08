@@ -15,7 +15,8 @@ Estrutura real da planilha (colunas 0-indexed):
   9 (J): Valor ABRIL (sumário) / label de mês
   10 (K): Valor MAIO (sumário)
   11 (L): Valor JUNHO (sumário)
-  12 (M): Valor JULHO (sumário) — opcional
+    12 (M): Valor JULHO (sumário) — opcional
+    13 (N): Valor AGOSTO (sumário) — opcional
 """
 import re
 from datetime import datetime
