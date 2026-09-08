@@ -55,7 +55,7 @@ const CAT_COLOR = {
 const catColor = c => CAT_COLOR[c] || '#7E8FA6';
 const zoneColor = z => ZONE_COLOR[z] || '#7E8FA6';
 
-const MESES_ORDER = ['Abril', 'Maio', 'Junho', 'Julho'];
+const MESES_ORDER = ['Abril', 'Maio', 'Junho', 'Julho', 'Agosto'];
 const ZONAS_ORDER = ['Zona Norte', 'Zona Sul', 'Zona Oeste', 'Centro'];
 const OTHER_ZONAS = ['Não identificado', 'Fora do Município / Rodovia'];
 
@@ -275,7 +275,7 @@ function renderSidebar() {
   if (!SIDEBAR_STATS) return;
 
   const el = document.getElementById('sidebar-stats');
-  const monthKeys = ['Abril', 'Maio', 'Junho', 'Julho'];
+  const monthKeys = MESES_ORDER;
   let html = '';
 
   Object.entries(SIDEBAR_STATS).forEach(([key, stat]) => {
@@ -312,7 +312,7 @@ function renderSidebar() {
   html += `</div>`;
 
   el.innerHTML = html;
-  document.getElementById('tag-sidebar').textContent = 'abr/jul 2026';
+  document.getElementById('tag-sidebar').textContent = 'abr/ago 2026';
 }
 
 // ============================================================
@@ -651,7 +651,7 @@ function renderCharts() {
 function renderCapturaMes() {
   if (!SIDEBAR_STATS) return;
 
-  const mesesGraf = ['Abril', 'Maio', 'Junho', 'Julho'];
+  const mesesGraf = MESES_ORDER;
   const totalMes = mesesGraf.map(m => SIDEBAR_STATS.registradas.months[m]);
   const capturadoMes = mesesGraf.map(m => SIDEBAR_STATS.capturadas.months[m]);
   const percMes = mesesGraf.map(m => SIDEBAR_STATS.pctCaptura.months[m]);

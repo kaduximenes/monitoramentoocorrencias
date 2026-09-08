@@ -28,7 +28,7 @@ import openpyxl
 # --- Caminho da pasta de planilhas ---
 PLANILHAS_DIR = Path(__file__).resolve().parent.parent / "Planilhas"
 
-MESES_STATS = ["Abril", "Maio", "Junho", "Julho"]
+MESES_STATS = ["Abril", "Maio", "Junho", "Julho", "Agosto"]
 
 MESES_MAP = {
     4: "Abril", 5: "Maio", 6: "Junho",
@@ -218,6 +218,7 @@ def extrair_dados_xlsx(caminho: Path) -> tuple[list[dict], dict]:
         col_k = row[10] if len(row) > 10 else None
         col_l = row[11] if len(row) > 11 else None
         col_m = row[12] if len(row) > 12 else None  # Julho (opcional)
+        col_n = row[13] if len(row) > 13 else None  # Agosto (opcional)
 
         # Linha de sumário?
         if col_i and isinstance(col_i, str):
@@ -228,6 +229,7 @@ def extrair_dados_xlsx(caminho: Path) -> tuple[list[dict], dict]:
                     "Maio": float(str(col_k).replace(",", ".")) if col_k else 0,
                     "Junho": float(str(col_l).replace(",", ".")) if col_l else 0,
                     "Julho": float(str(col_m).replace(",", ".")) if col_m else 0,
+                    "Agosto": float(str(col_n).replace(",", ".")) if col_n else 0,
                 }
             except (ValueError, TypeError):
                 continue
