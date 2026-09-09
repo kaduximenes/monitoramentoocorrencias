@@ -44,7 +44,7 @@ _etag: str = ""
 
 def _compute_etag(dados: list[dict], stats: dict) -> str:
     """Gera um hash ETag baseado nos dados + stats para cache HTTP."""
-    payload = json.dumps({"d": len(dados), "s": stats}, sort_keys=True, default=str)
+    payload = json.dumps({"d": dados, "s": stats}, sort_keys=True, default=str)
     return hashlib.sha256(payload.encode()).hexdigest()[:16]
 
 

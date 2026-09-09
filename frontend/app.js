@@ -98,8 +98,8 @@ async function loadData() {
 
   try {
     const [dadosRes, statsRes] = await Promise.all([
-      fetch(`${API_BASE}/api/dados`),
-      fetch(`${API_BASE}/api/stats`),
+      fetch(`${API_BASE}/api/dados`, { cache: 'no-store' }),
+      fetch(`${API_BASE}/api/stats`, { cache: 'no-store' }),
     ]);
 
     if (!dadosRes.ok) throw new Error(`API dados: ${dadosRes.status}`);
