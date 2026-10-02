@@ -55,7 +55,7 @@ const CAT_COLOR = {
 const catColor = c => CAT_COLOR[c] || '#7E8FA6';
 const zoneColor = z => ZONE_COLOR[z] || '#7E8FA6';
 
-const MESES_ORDER = ['Abril', 'Maio', 'Junho', 'Julho', 'Agosto'];
+const MESES_ORDER = ['Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro'];
 const ZONAS_ORDER = ['Zona Norte', 'Zona Sul', 'Zona Oeste', 'Centro'];
 const OTHER_ZONAS = ['Não identificado', 'Fora do Município / Rodovia'];
 
@@ -312,7 +312,7 @@ function renderSidebar() {
   html += `</div>`;
 
   el.innerHTML = html;
-  document.getElementById('tag-sidebar').textContent = 'abr/ago 2026';
+  document.getElementById('tag-sidebar').textContent = 'abr/set 2026';
 }
 
 // ============================================================
@@ -811,7 +811,7 @@ function renderKPIs() {
 // Log table (com busca e paginação)
 // ============================================================
 function renderLog() {
-  const mesIdx = { Abril: 4, Maio: 5, Junho: 6, Julho: 7, Agosto: 8 };
+  const mesIdx = { Abril: 4, Maio: 5, Junho: 6, Julho: 7, Agosto: 8, Setembro: 9 };
   let data = filteredData().sort(
     (a, b) =>
       (mesIdx[a.Mes] - mesIdx[b.Mes]) ||

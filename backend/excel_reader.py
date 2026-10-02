@@ -17,6 +17,7 @@ Estrutura real da planilha (colunas 0-indexed):
   11 (L): Valor JUNHO (sumário)
     12 (M): Valor JULHO (sumário) — opcional
     13 (N): Valor AGOSTO (sumário) — opcional
+    14 (O): Valor SETEMBRO (sumário) — opcional
 """
 import re
 from datetime import datetime
@@ -29,7 +30,7 @@ import openpyxl
 # --- Caminho da pasta de planilhas ---
 PLANILHAS_DIR = Path(__file__).resolve().parent.parent / "Planilhas"
 
-MESES_STATS = ["Abril", "Maio", "Junho", "Julho", "Agosto"]
+MESES_STATS = ["Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro"]
 
 MESES_MAP = {
     4: "Abril", 5: "Maio", 6: "Junho",
@@ -220,6 +221,7 @@ def extrair_dados_xlsx(caminho: Path) -> tuple[list[dict], dict]:
         col_l = row[11] if len(row) > 11 else None
         col_m = row[12] if len(row) > 12 else None  # Julho (opcional)
         col_n = row[13] if len(row) > 13 else None  # Agosto (opcional)
+        col_o = row[14] if len(row) > 14 else None  # Setembro (opcional)
 
         # Linha de sumário?
         if col_i and isinstance(col_i, str):
@@ -231,6 +233,7 @@ def extrair_dados_xlsx(caminho: Path) -> tuple[list[dict], dict]:
                     "Junho": float(str(col_l).replace(",", ".")) if col_l else 0,
                     "Julho": float(str(col_m).replace(",", ".")) if col_m else 0,
                     "Agosto": float(str(col_n).replace(",", ".")) if col_n else 0,
+                    "Setembro": float(str(col_o).replace(",", ".")) if col_o else 0,
                 }
             except (ValueError, TypeError):
                 continue
