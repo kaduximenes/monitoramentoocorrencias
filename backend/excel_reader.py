@@ -194,13 +194,13 @@ def extrair_dados_xlsx(caminho: Path) -> tuple[list[dict], dict]:
 
     dados = []
     sidebar_stats = {
-        "registradas": {"label": "Total registradas", "accent": "#F2A93B",
+        "registradas": {"label": "Total registradas", "accent": "#13335A",
                         "months": {m: 0 for m in MESES_STATS}},
-        "capturadas": {"label": "Total capturadas por alarmes", "accent": "#33C9B8",
+        "capturadas": {"label": "Total capturadas por alarmes", "accent": "#2A688F",
                        "months": {m: 0 for m in MESES_STATS}},
-        "pctCaptura": {"label": "% de captura", "accent": "#4C8DF0",
+        "pctCaptura": {"label": "% de captura", "accent": "#42B9EB",
                        "months": {m: 0 for m in MESES_STATS}},
-        "recebidas": {"label": "% recebidas (não capturadas)", "accent": "#7E8FA6",
+        "recebidas": {"label": "% recebidas (não capturadas)", "accent": "#7D91A3",
                       "months": {m: 0 for m in MESES_STATS}},
     }
 
@@ -303,13 +303,13 @@ def carregar_todas_planilhas() -> tuple[list[dict], dict]:
 
     todos_dados = []
     stats_final = {
-        "registradas": {"label": "Total registradas", "accent": "#F2A93B",
+        "registradas": {"label": "Total registradas", "accent": "#13335A",
                         "months": {m: 0 for m in MESES_STATS}},
-        "capturadas": {"label": "Total capturadas por alarmes", "accent": "#33C9B8",
+        "capturadas": {"label": "Total capturadas por alarmes", "accent": "#2A688F",
                        "months": {m: 0 for m in MESES_STATS}},
-        "pctCaptura": {"label": "% de captura", "accent": "#4C8DF0",
+        "pctCaptura": {"label": "% de captura", "accent": "#42B9EB",
                        "months": {m: 0 for m in MESES_STATS}},
-        "recebidas": {"label": "% recebidas (não capturadas)", "accent": "#7E8FA6",
+        "recebidas": {"label": "% recebidas (não capturadas)", "accent": "#7D91A3",
                       "months": {m: 0 for m in MESES_STATS}},
     }
 

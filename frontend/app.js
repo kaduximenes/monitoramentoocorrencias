@@ -27,33 +27,36 @@ const AUTO_REFRESH_INTERVAL = 60;
 // ============================================================
 // Design tokens
 // ============================================================
+// Paleta de zonas: progressão do degrade da marca (#13335A -> #42B9EB)
 const ZONE_COLOR = {
-  'Zona Norte': '#4C8DF0',
-  'Zona Sul': '#33C9B8',
-  'Zona Oeste': '#F2A93B',
-  'Centro': '#8E8CF0',
-  'Não identificado': '#54637A',
+  'Zona Norte': '#13335A',
+  'Zona Sul': '#2A688F',
+  'Zona Oeste': '#4E8FBF',
+  'Centro': '#42B9EB',
+  'Não identificado': '#7D91A3',
   'Fora do Município / Rodovia': '#B08968',
 };
+// Paleta de categorias: ancorada na cor da marca, com matizes
+// funcionais (vermelho para sinistro, laranja para incendio)
 const CAT_COLOR = {
-  'Acidente de trânsito': '#E8636B',
-  'Enguiço de veículo': '#F2A93B',
-  'Operação Policial': '#4C8DF0',
-  'Atropelamento': '#E85D5D',
-  'Manutenção na via': '#8E8CF0',
-  'Queda de moto/veículo': '#D98CD9',
-  'Queda de carga na via': '#C97AE0',
-  'Incêndio': '#FF7A45',
-  'Ocorrência CBMERJ': '#33C9B8',
-  'Capotamento de veículo': '#E0A83B',
-  'Obra na via': '#6FA8DC',
-  'Semáforo apagado': '#F2D43B',
+  'Acidente de trânsito': '#C0392B',
+  'Enguiço de veículo': '#D98324',
+  'Operação Policial': '#13335A',
+  'Atropelamento': '#8E2F3F',
+  'Manutenção na via': '#2A688F',
+  'Queda de moto/veículo': '#8E6FC0',
+  'Queda de carga na via': '#6C4FA1',
+  'Incêndio': '#D9481F',
+  'Ocorrência CBMERJ': '#1F7A6B',
+  'Capotamento de veículo': '#B8860B',
+  'Obra na via': '#4E8FBF',
+  'Semáforo apagado': '#C9A227',
   'Evento/Manifestação': '#B08968',
-  'Risco/obstáculo na via': '#D9A05B',
-  'Outros / não classificado': '#7E8FA6',
+  'Risco/obstáculo na via': '#A1673C',
+  'Outros / não classificado': '#7D91A3',
 };
-const catColor = c => CAT_COLOR[c] || '#7E8FA6';
-const zoneColor = z => ZONE_COLOR[z] || '#7E8FA6';
+const catColor = c => CAT_COLOR[c] || '#7D91A3';
+const zoneColor = z => ZONE_COLOR[z] || '#7D91A3';
 
 const MESES_ORDER = ['Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro'];
 const ZONAS_ORDER = ['Zona Norte', 'Zona Sul', 'Zona Oeste', 'Centro'];
@@ -136,7 +139,7 @@ async function loadData() {
     // Mostra mensagem amigável no corpo
     document.querySelector('.wrap').innerHTML = `
       <div style="text-align:center; padding:60px 20px; max-width:520px; margin:0 auto;">
-        <div style="font-family:'Space Grotesk',sans-serif; font-size:20px; color:var(--text); margin-bottom:12px;">
+        <div style="font-family:'Cera Pro',sans-serif; font-size:20px; color:var(--text); margin-bottom:12px;">
           ⚠️ Backend não encontrado
         </div>
         <div style="color:var(--muted); font-size:13px; line-height:1.7;">
@@ -144,7 +147,7 @@ async function loadData() {
           Execute no terminal:
         </div>
         <div style="background:var(--panel); border:1px solid var(--border); border-radius:6px;
-                    padding:12px 18px; margin:16px 0; font-family:'IBM Plex Mono',monospace;
+                    padding:12px 18px; margin:16px 0; font-family:'Cera Pro',monospace;
                     font-size:13px; color:var(--teal);">
           python backend/app.py
         </div>
@@ -295,7 +298,7 @@ function renderSidebar() {
   });
 
   // Barra de eficiência
-  html += `<div class="sidebar-stat" style="--ss-accent:#8E8CF0">
+  html += `<div class="sidebar-stat" style="--ss-accent:#2A688F">
     <div class="sidebar-stat-label">Eficiência de captura por mês</div>`;
   monthKeys.forEach(m => {
     const cap = SIDEBAR_STATS.capturadas.months[m];
@@ -304,9 +307,9 @@ function renderSidebar() {
     html += `<div class="sidebar-perc-row">
       <span class="spr-label">${m.substring(0, 3)}</span>
       <div class="spr-bar-wrap">
-        <div class="spr-bar" style="width:${pct}%; background:#8E8CF0;"></div>
+        <div class="spr-bar" style="width:${pct}%; background:#2A688F;"></div>
       </div>
-      <span class="spr-val" style="color:#8E8CF0">${pct}%</span>
+      <span class="spr-val" style="color:#2A688F">${pct}%</span>
     </div>`;
   });
   html += `</div>`;
@@ -490,8 +493,8 @@ function makeOrUpdate(id, config) {
   charts[id] = new Chart(document.getElementById(id), config);
 }
 
-Chart.defaults.color = '#7E8FA6';
-Chart.defaults.font.family = "'Inter', sans-serif";
+Chart.defaults.color = '#546E82';
+Chart.defaults.font.family = "'Cera Pro', sans-serif";
 Chart.defaults.font.size = 11.5;
 
 function renderCharts() {
@@ -524,7 +527,7 @@ function renderCharts() {
       indexAxis: 'y',
       plugins: { legend: { display: false } },
       scales: {
-        x: { grid: { color: '#152233' }, ticks: { precision: 0 } },
+        x: { grid: { color: '#E6EAED' }, ticks: { precision: 0 } },
         y: { grid: { display: false }, ticks: { font: { size: 10.5 } } },
       },
     },
@@ -540,7 +543,7 @@ function renderCharts() {
   });
   const zonaLabels = [...ZONAS_ORDER, 'Outras / não identificado'];
   const zonaVals = [...ZONAS_ORDER.map(z => zonaCounts[z]), outrasCount];
-  const zonaColors = [...ZONAS_ORDER.map(zoneColor), '#54637A'];
+  const zonaColors = [...ZONAS_ORDER.map(zoneColor), '#7D91A3'];
   document.getElementById('tag-zona').textContent = `${data.length} ocorrências`;
 
   makeOrUpdate('chart-zona', {
@@ -551,7 +554,7 @@ function renderCharts() {
         {
           data: zonaVals,
           backgroundColor: zonaColors,
-          borderColor: '#111E2E',
+          borderColor: '#FFFFFF',
           borderWidth: 3,
         },
       ],
@@ -586,12 +589,12 @@ function renderCharts() {
       datasets: [
         {
           data: diaLabels.map(d => diaCounts[d] || 0),
-          borderColor: '#F2A93B',
-          backgroundColor: 'rgba(242,169,59,0.12)',
+          borderColor: '#2A688F',
+          backgroundColor: 'rgba(42,104,143,0.10)',
           fill: true,
           tension: 0.3,
           pointRadius: 2,
-          pointBackgroundColor: '#F2A93B',
+          pointBackgroundColor: '#2A688F',
         },
       ],
     },
@@ -599,7 +602,7 @@ function renderCharts() {
       plugins: { legend: { display: false } },
       scales: {
         x: { grid: { display: false }, ticks: { maxTicksLimit: 15 } },
-        y: { grid: { color: '#152233' }, ticks: { precision: 0 } },
+        y: { grid: { color: '#E6EAED' }, ticks: { precision: 0 } },
       },
     },
   });
@@ -626,7 +629,7 @@ function renderCharts() {
       datasets: [
         {
           data: eqSorted.map(x => x[1]),
-          backgroundColor: '#4C8DF0',
+          backgroundColor: '#2A688F',
           borderRadius: 4,
           maxBarThickness: 50,
           categoryPercentage: 0.7,
@@ -638,7 +641,7 @@ function renderCharts() {
       indexAxis: 'y',
       plugins: { legend: { display: false } },
       scales: {
-        x: { grid: { color: '#152233' }, ticks: { precision: 0 } },
+        x: { grid: { color: '#E6EAED' }, ticks: { precision: 0 } },
         y: { grid: { display: false }, ticks: { font: { size: 10 } } },
       },
     },
@@ -665,8 +668,8 @@ function renderCapturaMes() {
           label: 'Total de Ocorrências capturadas',
           data: totalMes,
           yAxisID: 'y',
-          backgroundColor: 'rgba(242,169,59,0.25)',
-          borderColor: '#F2A93B',
+          backgroundColor: 'rgba(42,104,143,0.18)',
+          borderColor: '#2A688F',
           borderWidth: 1,
           borderRadius: 4,
           maxBarThickness: 80,
@@ -680,11 +683,11 @@ function renderCapturaMes() {
           yAxisID: 'y1',
           tension: 0.3,
           fill: false,
-          borderColor: '#33C9B8',
-          backgroundColor: '#33C9B8',
+          borderColor: '#42B9EB',
+          backgroundColor: '#42B9EB',
           borderWidth: 3,
           pointRadius: 5,
-          pointBackgroundColor: '#33C9B8',
+          pointBackgroundColor: '#42B9EB',
         },
       ],
     },
@@ -712,7 +715,7 @@ function renderCapturaMes() {
           position: 'left',
           beginAtZero: true,
           title: { display: true, text: 'Quantidade' },
-          grid: { color: '#152233' },
+          grid: { color: '#E6EAED' },
           ticks: { precision: 0 },
         },
         y1: {
@@ -771,25 +774,25 @@ function renderKPIs() {
       sub: hasFilter
         ? 'com filtros aplicados'
         : `de ${RAW_DATA.length} registradas (abr–jul)`,
-      accent: '#F2A93B',
+      accent: '#13335A',
     },
     {
       label: 'Zona mais afetada',
       value: topZona ? topZona[0] : '—',
       sub: topZona ? `${topZona[1]} ocorrências` : '',
-      accent: topZona ? zoneColor(topZona[0]) : '#7E8FA6',
+      accent: topZona ? zoneColor(topZona[0]) : '#7D91A3',
     },
     {
       label: 'Tipo mais frequente',
       value: topCat ? topCat[0] : '—',
       sub: topCat ? `${topCat[1]} registros` : '',
-      accent: topCat ? catColor(topCat[0]) : '#7E8FA6',
+      accent: topCat ? catColor(topCat[0]) : '#7D91A3',
     },
     {
       label: 'Mês com mais registros',
       value: topMes ? topMes[0] : '—',
       sub: topMes ? `${topMes[1]} ocorrências` : '',
-      accent: '#33C9B8',
+      accent: '#2A688F',
     },
   ];
 
