@@ -1,6 +1,6 @@
 # COR · Painel de Ocorrências Espontâneas
 
-Dashboard interativo para monitoramento de alarmes apurado pela Coordenação COR (Centro de Operações Rio), com dados extraídos automaticamente de planilhas Excel.
+Dashboard interativo para monitoramento de alarmes capturadas pela Coordenação COR (Centro de Operações Rio), com dados extraídos automaticamente de planilhas Excel.
 
 ---
 
