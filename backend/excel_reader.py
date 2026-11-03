@@ -335,13 +335,16 @@ def _extrair_sumario(ws, meses_col: dict, stats: dict) -> None:
 
 
 def _chave_registro(reg: dict) -> tuple:
-    """Chave para não repetir a mesma ocorrência vinda de arquivos diferentes."""
+    """Chave para não repetir a mesma ocorrência vinda de arquivos diferentes.
+
+    A coluna Equipe fica de fora porque o consolidado grava o turno
+    ("NOTURNA") enquanto as planilhas mensais gravam os nomes da equipe.
+    """
     return (
         reg.get("Mes", ""),
         reg.get("DataStr", ""),
         _normalizar(reg.get("Ocorrência", "")),
         _normalizar(reg.get("Endereço", "")),
-        _normalizar(reg.get("Equipe", "")),
     )
 
 
@@ -386,6 +389,10 @@ def extrair_dados_xlsx(caminho: Path) -> tuple[list[dict], dict]:
             equipe = str(_valor(row, mapa.get("equipe")) or "").strip()
             alarmes = str(_valor(row, mapa.get("alarmes")) or "").strip()
             agencia = str(_valor(row, mapa.get("agencia")) or "").strip()
+
+            # Linhas apenas com data preenchida são rascunhos/template da planilha
+            if not ocorrencia and not endereco:
+                continue
 
             dados.append({
                 "QTE": 0,
