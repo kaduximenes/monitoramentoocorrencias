@@ -2,25 +2,19 @@
 excel_reader.py — Lê as planilhas de monitoramento de alarmes COR
 e extrai os dados estruturados.
 
-Estrutura real da planilha (colunas 0-indexed):
-  0 (A): vazia
-  1 (B): Data (datetime)
-  2 (C): Alarmes utilizados
-  3 (D): Ocorrência
-  4 (E): Equipe
-  5 (F): Endereço
-  6 (G): Agência Validadora
-  7 (H): vazia
-  8 (I): Label de sumário (ex: "total de ocorrencia registradas")
-  9 (J): Valor ABRIL (sumário) / label de mês
-  10 (K): Valor MAIO (sumário)
-  11 (L): Valor JUNHO (sumário)
-    12 (M): Valor JULHO (sumário) — opcional
-    13 (N): Valor AGOSTO (sumário) — opcional
-    14 (O): Valor SETEMBRO (sumário) — opcional
-    15 (P): Valor OUTUBRO (sumário) — opcional
+O layout é detectado automaticamente, sem depender de posições fixas:
+  * a linha de cabeçalho é localizada procurando as colunas "Data", "Alarmes
+    utilizados", "Ocorrência", "Equipe", "Endereço" e "Agência Validadora".
+    Assim funcionam tanto o arquivo consolidado (cabeçalho na linha 3, colunas
+    B–G) quanto as planilhas mensais (cabeçalho na linha 8, com "QTE" em A);
+  * os meses do bloco de sumário são lidos dos rótulos (ABRIL, MAIO, ...), então
+    um mês novo lançado na planilha aparece sozinho no painel.
+
+Arquivos diferentes podem conter os mesmos registros (consolidado + mensal).
+`carregar_todas_planilhas()` mantém apenas uma cópia de cada ocorrência.
 """
 import re
+import unicodedata
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
@@ -31,7 +25,27 @@ import openpyxl
 # --- Caminho da pasta de planilhas ---
 PLANILHAS_DIR = Path(__file__).resolve().parent.parent / "Planilhas"
 
-MESES_STATS = ["Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro"]
+# Ordem canônica usada para ordenar os meses no painel
+MESES_CANONICOS = [
+    "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+    "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
+]
+
+# Rótulos aceitos no bloco de sumário -> nome canônico do mês
+MESES_ALIASES = {
+    "jan": "Janeiro", "janeiro": "Janeiro",
+    "fev": "Fevereiro", "fevereiro": "Fevereiro",
+    "mar": "Março", "marco": "Março",
+    "abr": "Abril", "abril": "Abril",
+    "mai": "Maio", "maio": "Maio",
+    "jun": "Junho", "junho": "Junho",
+    "jul": "Julho", "julho": "Julho",
+    "ago": "Agosto", "agosto": "Agosto",
+    "set": "Setembro", "setembro": "Setembro",
+    "out": "Outubro", "outubro": "Outubro",
+    "nov": "Novembro", "novembro": "Novembro",
+    "dez": "Dezembro", "dezembro": "Dezembro",
+}
 
 MESES_MAP = {
     4: "Abril", 5: "Maio", 6: "Junho",
@@ -39,6 +53,19 @@ MESES_MAP = {
     10: "Outubro", 11: "Novembro", 12: "Dezembro",
     1: "Janeiro", 2: "Fevereiro", 3: "Março",
 }
+
+# Nomes de coluna aceitos no cabeçalho da tabela de ocorrências
+COLUNAS_ALIASES = {
+    "data": ("data",),
+    "alarmes": ("alarmes utilizados", "alarmes"),
+    "ocorrencia": ("ocorrencia",),
+    "equipe": ("equipe",),
+    "endereco": ("endereco",),
+    "agencia": ("agencia validadora", "agencia"),
+    "qte": ("qte", "qtd", "qtde"),
+}
+
+_KEYWORDS_SUMARIO = ("registradas", "capturadas", "capturada", "recebidas")
 
 
 def parse_data(valor) -> Optional[datetime]:
@@ -188,148 +215,257 @@ def simplificar_fonte(raw: Optional[str]) -> str:
     return "Outra fonte"
 
 
-def extrair_dados_xlsx(caminho: Path) -> tuple[list[dict], dict]:
-    """Extrai dados e sumários. Retorna (lista_de_registros, sidebar_stats)."""
-    wb = openpyxl.load_workbook(caminho, data_only=True)
-    ws = wb.active
+# ============================================================
+# Detecção de layout
+# ============================================================
 
-    dados = []
-    sidebar_stats = {
-        "registradas": {"label": "Total registradas", "accent": "#13335A",
-                        "months": {m: 0 for m in MESES_STATS}},
-        "capturadas": {"label": "Total capturadas por alarmes", "accent": "#2A688F",
-                       "months": {m: 0 for m in MESES_STATS}},
-        "pctCaptura": {"label": "% de captura", "accent": "#42B9EB",
-                       "months": {m: 0 for m in MESES_STATS}},
-        "recebidas": {"label": "% recebidas (não capturadas)", "accent": "#7D91A3",
-                      "months": {m: 0 for m in MESES_STATS}},
+def _normalizar(valor) -> str:
+    """Normaliza texto para comparação (minúsculas, sem acentos, espaços simples)."""
+    if valor is None:
+        return ""
+    texto = unicodedata.normalize("NFKD", str(valor))
+    texto = "".join(c for c in texto if not unicodedata.combining(c))
+    return " ".join(texto.lower().split()).strip(" .:-")
+
+
+def _valor(row: tuple, col: Optional[int]):
+    """Retorna row[col] com segurança (col pode ser None)."""
+    if col is None or col < 0 or col >= len(row):
+        return None
+    return row[col]
+
+
+def _localizar_cabecalho(ws, max_linhas: int = 40) -> tuple[Optional[int], dict]:
+    """Encontra a linha de cabeçalho e o mapa campo -> índice de coluna."""
+    limite = min(max_linhas, ws.max_row or max_linhas)
+    for numero, row in enumerate(
+        ws.iter_rows(min_row=1, max_row=limite, values_only=True), start=1
+    ):
+        mapa: dict[str, int] = {}
+        for col, celula in enumerate(row):
+            texto = _normalizar(celula)
+            if not texto:
+                continue
+            for campo, aliases in COLUNAS_ALIASES.items():
+                if campo not in mapa and texto in aliases:
+                    mapa[campo] = col
+        if "data" in mapa and len(mapa) >= 3:
+            return numero, mapa
+    return None, {}
+
+
+def _localizar_meses(ws, max_linhas: int = 15) -> dict:
+    """Mapeia índice de coluna -> nome do mês a partir dos rótulos do sumário."""
+    limite = min(max_linhas, ws.max_row or max_linhas)
+    meses: dict[int, str] = {}
+    for row in ws.iter_rows(min_row=1, max_row=limite, values_only=True):
+        for col, celula in enumerate(row):
+            if isinstance(celula, str):
+                nome = MESES_ALIASES.get(_normalizar(celula))
+                if nome:
+                    meses.setdefault(col, nome)
+    return meses
+
+
+def _linha_de_sumario(row: tuple) -> bool:
+    """True quando a linha pertence ao bloco de sumário (e não aos dados)."""
+    for celula in row:
+        if isinstance(celula, str):
+            texto = _normalizar(celula)
+            if any(k in texto for k in _KEYWORDS_SUMARIO):
+                return True
+    return False
+
+
+def _novo_stats() -> dict:
+    """Estrutura base dos indicadores da sidebar (meses preenchidos depois)."""
+    return {
+        "registradas": {"label": "Total registradas", "accent": "#13335A", "months": {}},
+        "capturadas": {"label": "Total capturadas por alarmes", "accent": "#2A688F", "months": {}},
+        "pctCaptura": {"label": "% de captura", "accent": "#42B9EB", "months": {}},
+        "recebidas": {"label": "% recebidas (não capturadas)", "accent": "#7D91A3", "months": {}},
     }
 
-    seq = 0
-    for i, row in enumerate(ws.iter_rows(min_row=4, values_only=True), start=4):
-        if not row or all(c is None for c in row):
+
+def _aplicar_percentual(stat: dict, valores: dict) -> None:
+    """Converte frações (0–1) ou valores já em % para percentual."""
+    for mes, valor in valores.items():
+        stat["months"][mes] = round(valor * 100, 2) if valor <= 1.5 else round(valor, 2)
+
+
+def _extrair_sumario(ws, meses_col: dict, stats: dict) -> None:
+    """Preenche os indicadores a partir das linhas de sumário, se existirem."""
+    if not meses_col:
+        return
+
+    for row in ws.iter_rows(values_only=True):
+        if not row:
             continue
 
-        col_b = row[1] if len(row) > 1 else None
-        col_c = row[2] if len(row) > 2 else None
-        col_d = row[3] if len(row) > 3 else None
-        col_e = row[4] if len(row) > 4 else None
-        col_f = row[5] if len(row) > 5 else None
-        col_g = row[6] if len(row) > 6 else None
-        col_i = row[8] if len(row) > 8 else None
-        col_j = row[9] if len(row) > 9 else None
-        col_k = row[10] if len(row) > 10 else None
-        col_l = row[11] if len(row) > 11 else None
-        col_m = row[12] if len(row) > 12 else None  # Julho (opcional)
-        col_n = row[13] if len(row) > 13 else None  # Agosto (opcional)
-        col_o = row[14] if len(row) > 14 else None  # Setembro (opcional)
-        col_p = row[15] if len(row) > 15 else None  # Outubro (opcional)
+        label = ""
+        for col, celula in enumerate(row):
+            if col in meses_col or not isinstance(celula, str):
+                continue
+            texto = _normalizar(celula)
+            if any(k in texto for k in _KEYWORDS_SUMARIO):
+                label = texto
+                break
+        if not label:
+            continue
 
-        # Linha de sumário?
-        if col_i and isinstance(col_i, str):
-            label = col_i.strip().lower()
-            try:
-                vals = {
-                    "Abril": float(str(col_j).replace(",", ".")) if col_j else 0,
-                    "Maio": float(str(col_k).replace(",", ".")) if col_k else 0,
-                    "Junho": float(str(col_l).replace(",", ".")) if col_l else 0,
-                    "Julho": float(str(col_m).replace(",", ".")) if col_m else 0,
-                    "Agosto": float(str(col_n).replace(",", ".")) if col_n else 0,
-                    "Setembro": float(str(col_o).replace(",", ".")) if col_o else 0,
-                    "Outubro": float(str(col_p).replace(",", ".")) if col_p else 0,
-                }
-            except (ValueError, TypeError):
+        valores = {}
+        for col, mes in meses_col.items():
+            v = _valor(row, col)
+            if isinstance(v, (int, float)) and not isinstance(v, bool):
+                valores[mes] = float(v)
+        if not valores:
+            continue
+
+        if "recebidas" in label:
+            _aplicar_percentual(stats["recebidas"], valores)
+        elif "registradas" in label:
+            for mes, v in valores.items():
+                stats["registradas"]["months"][mes] = int(round(v))
+        elif "captur" in label:
+            if all(0 < v <= 1.5 for v in valores.values()):
+                _aplicar_percentual(stats["pctCaptura"], valores)
+            else:
+                for mes, v in valores.items():
+                    stats["capturadas"]["months"][mes] = int(round(v))
+
+
+def _chave_registro(reg: dict) -> tuple:
+    """Chave para não repetir a mesma ocorrência vinda de arquivos diferentes."""
+    return (
+        reg.get("Mes", ""),
+        reg.get("DataStr", ""),
+        _normalizar(reg.get("Ocorrência", "")),
+        _normalizar(reg.get("Endereço", "")),
+        _normalizar(reg.get("Equipe", "")),
+    )
+
+
+def _ordenar_meses(meses) -> list[str]:
+    """Ordena os meses presentes na ordem canônica do calendário."""
+    conhecidos = [m for m in MESES_CANONICOS if m in meses]
+    desconhecidos = sorted(m for m in meses if m not in MESES_CANONICOS)
+    return conhecidos + desconhecidos
+
+
+def extrair_dados_xlsx(caminho: Path) -> tuple[list[dict], dict]:
+    """Extrai registros e sumário de uma planilha.
+
+    O cabeçalho é detectado automaticamente, então a mesma função atende o
+    arquivo consolidado e as planilhas mensais (layouts diferentes).
+    """
+    wb = openpyxl.load_workbook(caminho, data_only=True)
+    ws = wb.active
+    stats = _novo_stats()
+
+    try:
+        header_row, mapa = _localizar_cabecalho(ws)
+        if header_row is None:
+            print(f"[AVISO] Cabeçalho não encontrado em {caminho.name}")
+            return [], stats
+
+        _extrair_sumario(ws, _localizar_meses(ws), stats)
+
+        dados: list[dict] = []
+        for row in ws.iter_rows(min_row=header_row + 1, values_only=True):
+            if not row or all(c is None for c in row):
+                continue
+            if _linha_de_sumario(row):
                 continue
 
-            if "registradas" in label and "%" not in label and "captur" not in label:
-                for m in MESES_STATS:
-                    sidebar_stats["registradas"]["months"][m] = int(vals[m])
-            elif "capturadas" in label or "captur" in label:
-                # Pode ser contagem (valores > 1) ou percentual (valores < 1)
-                if 0 < vals["Abril"] < 1:
-                    # Percentual de captura
-                    for m in MESES_STATS:
-                        sidebar_stats["pctCaptura"]["months"][m] = round(vals[m] * 100, 2)
-                else:
-                    # Contagem de capturadas
-                    for m in MESES_STATS:
-                        sidebar_stats["capturadas"]["months"][m] = int(vals[m])
-            elif "recebidas" in label:
-                for m in MESES_STATS:
-                    sidebar_stats["recebidas"]["months"][m] = round(vals[m] * 100, 2)
-            continue
+            dt = parse_data(_valor(row, mapa.get("data")))
+            if dt is None:
+                continue
 
-        # Linha de dados
-        dt = parse_data(col_b)
-        if dt is None:
-            continue
+            ocorrencia = str(_valor(row, mapa.get("ocorrencia")) or "").strip()
+            endereco = str(_valor(row, mapa.get("endereco")) or "").strip()
+            equipe = str(_valor(row, mapa.get("equipe")) or "").strip()
+            alarmes = str(_valor(row, mapa.get("alarmes")) or "").strip()
+            agencia = str(_valor(row, mapa.get("agencia")) or "").strip()
 
-        mes_nome = MESES_MAP.get(dt.month, f"Mês {dt.month}")
-        dia = dt.day
-        data_str = f"{dia:02d}/{dt.month:02d}"
+            dados.append({
+                "QTE": 0,
+                "Mes": MESES_MAP.get(dt.month, f"Mês {dt.month}"),
+                "Dia": dt.day,
+                "DataStr": f"{dt.day:02d}/{dt.month:02d}",
+                "Categoria": classificar_categoria(ocorrencia),
+                "Zona": classificar_zona(endereco, ocorrencia),
+                "Ocorrência": ocorrencia,
+                "Equipe": equipe,
+                "Endereço": endereco,
+                "Agência Validadora": agencia,
+                "Alarmes utilizados": alarmes,
+                "Fonte": simplificar_fonte(alarmes),
+            })
 
-        ocorrencia = str(col_d).strip() if col_d else ""
-        endereco = str(col_f).strip() if col_f else ""
-        equipe = str(col_e).strip() if col_e else ""
-        alarmes = str(col_c).strip() if col_c else ""
-        agencia = str(col_g).strip() if col_g else ""
-
-        categoria = classificar_categoria(ocorrencia)
-        zona = classificar_zona(endereco, ocorrencia)
-        fonte = simplificar_fonte(alarmes)
-
-        seq += 1
-        registro = {
-            "QTE": seq,
-            "Mes": mes_nome,
-            "Dia": dia,
-            "DataStr": data_str,
-            "Categoria": categoria,
-            "Zona": zona,
-            "Ocorrência": ocorrencia,
-            "Equipe": equipe,
-            "Endereço": endereco,
-            "Agência Validadora": agencia,
-            "Alarmes utilizados": alarmes,
-            "Fonte": fonte,
-        }
-        dados.append(registro)
-
-    wb.close()
-    return dados, sidebar_stats
+        return dados, stats
+    finally:
+        wb.close()
 
 
 def carregar_todas_planilhas() -> tuple[list[dict], dict]:
-    """Varre a pasta Planilhas/ e carrega todos os .xlsx encontrados."""
+    """Varre a pasta Planilhas/ e consolida todos os .xlsx encontrados.
+
+    Registros repetidos entre arquivos (ex.: consolidado + planilha mensal) são
+    mantidos uma única vez; o primeiro arquivo em ordem alfabética prevalece,
+    o que faz o consolidado ganhar das planilhas mensais.
+    """
     if not PLANILHAS_DIR.exists():
         return [], {}
 
-    todos_dados = []
-    stats_final = {
-        "registradas": {"label": "Total registradas", "accent": "#13335A",
-                        "months": {m: 0 for m in MESES_STATS}},
-        "capturadas": {"label": "Total capturadas por alarmes", "accent": "#2A688F",
-                       "months": {m: 0 for m in MESES_STATS}},
-        "pctCaptura": {"label": "% de captura", "accent": "#42B9EB",
-                       "months": {m: 0 for m in MESES_STATS}},
-        "recebidas": {"label": "% recebidas (não capturadas)", "accent": "#7D91A3",
-                      "months": {m: 0 for m in MESES_STATS}},
-    }
+    todos_dados: list[dict] = []
+    stats_final = _novo_stats()
+    chaves_vistas: set[tuple] = set()
 
-    arquivos = sorted(PLANILHAS_DIR.glob("*.xlsx"))
-    for arq in arquivos:
+    for arq in sorted(PLANILHAS_DIR.glob("*.xlsx")):
         try:
-            dados, stats = extrair_dados_xlsx(arq)
-            todos_dados.extend(dados)
-            for key in stats_final:
-                for m in MESES_STATS:
-                    if stats[key]["months"][m]:
-                        stats_final[key]["months"][m] = stats[key]["months"][m]
+            dados, stats_arq = extrair_dados_xlsx(arq)
         except Exception as e:
             print(f"[ERRO] Falha ao ler {arq.name}: {e}")
+            continue
 
-    for i, d in enumerate(todos_dados, start=1):
-        d["QTE"] = i
+        novos: list[dict] = []
+        chaves_arq: set[tuple] = set()
+        for reg in dados:
+            chave = _chave_registro(reg)
+            if chave in chaves_vistas:
+                continue
+            novos.append(reg)
+            chaves_arq.add(chave)
+
+        ignorados = len(dados) - len(novos)
+        if ignorados:
+            print(f"[DEDUPE] {arq.name}: {ignorados} registro(s) repetido(s) ignorado(s)")
+
+        chaves_vistas |= chaves_arq
+        todos_dados.extend(novos)
+
+        for key in stats_final:
+            for mes, valor in stats_arq[key]["months"].items():
+                if valor:
+                    stats_final[key]["months"][mes] = valor
+
+    # Quantidade de ocorrências por mês (fallback quando não há bloco de sumário)
+    contagem: dict[str, int] = {}
+    for reg in todos_dados:
+        contagem[reg["Mes"]] = contagem.get(reg["Mes"], 0) + 1
+
+    for mes, qtd in contagem.items():
+        if not stats_final["capturadas"]["months"].get(mes):
+            stats_final["capturadas"]["months"][mes] = qtd
+
+    meses = _ordenar_meses(
+        set(contagem) | {m for s in stats_final.values() for m, v in s["months"].items() if v}
+    )
+    for stat in stats_final.values():
+        stat["months"] = {m: stat["months"].get(m, 0) for m in meses}
+
+    for i, reg in enumerate(todos_dados, start=1):
+        reg["QTE"] = i
 
     return todos_dados, stats_final
 
