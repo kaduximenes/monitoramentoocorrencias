@@ -109,13 +109,13 @@ def api_stats():
         # Fallback para valores padrão se a planilha não tiver sumários
         stats = {
             "registradas": {"label": "Total registradas", "accent": "#13335A",
-                        "months": {"Abril": 2286, "Maio": 2019, "Junho": 1877, "Julho": 0, "Agosto": 0, "Setembro": 0}},
+                        "months": {"Abril": 2286, "Maio": 2019, "Junho": 1877, "Julho": 0, "Agosto": 0, "Setembro": 0, "Outubro": 0}},
             "capturadas": {"label": "Total capturadas por alarmes", "accent": "#2A688F",
-                           "months": {"Abril": 273, "Maio": 472, "Junho": 257, "Julho": 0, "Agosto": 0, "Setembro": 0}},
+                           "months": {"Abril": 273, "Maio": 472, "Junho": 257, "Julho": 0, "Agosto": 0, "Setembro": 0, "Outubro": 0}},
             "pctCaptura": {"label": "% de captura", "accent": "#42B9EB",
-                           "months": {"Abril": 11.94, "Maio": 23.38, "Junho": 13.69, "Julho": 0, "Agosto": 0, "Setembro": 0}},
+                           "months": {"Abril": 11.94, "Maio": 23.38, "Junho": 13.69, "Julho": 0, "Agosto": 0, "Setembro": 0, "Outubro": 0}},
             "recebidas": {"label": "% recebidas (não capturadas)", "accent": "#7D91A3",
-                          "months": {"Abril": 88.05, "Maio": 76.62, "Junho": 86.30, "Julho": 0, "Agosto": 0, "Setembro": 0}},
+                          "months": {"Abril": 88.05, "Maio": 76.62, "Junho": 86.30, "Julho": 0, "Agosto": 0, "Setembro": 0, "Outubro": 0}},
         }
 
     response = make_response(jsonify(stats))
