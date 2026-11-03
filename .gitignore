@@ -1,3 +1,6 @@
 .env
 __pycache__
 
+# Arquivos temporários de bloqueio criados pelo Excel (~$arquivo.xlsx)
+Planilhas/~$*.xlsx
+
