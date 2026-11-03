@@ -58,7 +58,12 @@ const CAT_COLOR = {
 const catColor = c => CAT_COLOR[c] || '#7D91A3';
 const zoneColor = z => ZONE_COLOR[z] || '#7D91A3';
 
-const MESES_ORDER = ['Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro'];
+const MESES_CANON = [
+  'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
+];
+let MESES_ORDER = ['Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro'];
+let MES_IDX = Object.fromEntries(MESES_ORDER.map((m, i) => [m, i + 1]));
 const ZONAS_ORDER = ['Zona Norte', 'Zona Sul', 'Zona Oeste', 'Centro'];
 const OTHER_ZONAS = ['Não identificado', 'Fora do Município / Rodovia'];
 
@@ -80,6 +85,30 @@ let searchQuery = '';
 let logPage = 1;
 const LOG_PAGE_SIZE = 50;
 let autoRefreshTimer = null;
+
+// Monta a lista de meses a partir dos dados/sumário: um mês novo na planilha
+// aparece automaticamente no painel, sem alterar o código.
+function buildMonthOrder() {
+  const presentes = new Set();
+  RAW_DATA.forEach(d => {
+    if (d.Mes) presentes.add(d.Mes);
+  });
+  if (SIDEBAR_STATS) {
+    Object.values(SIDEBAR_STATS).forEach(stat => {
+      Object.keys((stat && stat.months) || {}).forEach(m => presentes.add(m));
+    });
+  }
+
+  const conhecidos = MESES_CANON.filter(m => presentes.has(m));
+  const extras = [...presentes].filter(m => !MESES_CANON.includes(m)).sort();
+  const lista = [...conhecidos, ...extras];
+  if (lista.length) MESES_ORDER = lista;
+
+  MES_IDX = Object.fromEntries(MESES_ORDER.map((m, i) => [m, i + 1]));
+  [...state.meses].forEach(m => {
+    if (!MESES_ORDER.includes(m)) state.meses.delete(m);
+  });
+}
 
 // ============================================================
 // Inicialização — carrega dados da API
@@ -117,6 +146,8 @@ async function loadData() {
     RAW_DATA.forEach(d => {
       d.Fonte = simplifyFonte(d['Alarmes utilizados']);
     });
+
+    buildMonthOrder();
 
     render();
     statusEl.innerHTML =
@@ -287,7 +318,7 @@ function renderSidebar() {
       <div class="sidebar-stat-label">${stat.label}</div>
       <div class="sidebar-stat-months">`;
     monthKeys.forEach(m => {
-      const val = stat.months[m];
+      const val = (stat.months || {})[m] ?? 0;
       const display = isPct ? val.toFixed(1) + '%' : val.toLocaleString();
       html += `<div class="sidebar-stat-month">
         <div class="mname">${m.substring(0, 3)}</div>
@@ -301,13 +332,14 @@ function renderSidebar() {
   html += `<div class="sidebar-stat" style="--ss-accent:#2A688F">
     <div class="sidebar-stat-label">Eficiência de captura por mês</div>`;
   monthKeys.forEach(m => {
-    const cap = SIDEBAR_STATS.capturadas.months[m];
-    const tot = SIDEBAR_STATS.registradas.months[m];
-    const pct = ((cap / tot) * 100).toFixed(1);
+    const cap = SIDEBAR_STATS.capturadas.months[m] || 0;
+    const tot = SIDEBAR_STATS.registradas.months[m] || 0;
+    const pctNum = tot ? (cap / tot) * 100 : 0;
+    const pct = pctNum.toFixed(1);
     html += `<div class="sidebar-perc-row">
       <span class="spr-label">${m.substring(0, 3)}</span>
       <div class="spr-bar-wrap">
-        <div class="spr-bar" style="width:${pct}%; background:#2A688F;"></div>
+        <div class="spr-bar" style="width:${pctNum}%; background:#2A688F;"></div>
       </div>
       <span class="spr-val" style="color:#2A688F">${pct}%</span>
     </div>`;
@@ -315,7 +347,12 @@ function renderSidebar() {
   html += `</div>`;
 
   el.innerHTML = html;
-  document.getElementById('tag-sidebar').textContent = 'abr/out 2026';
+  const primeiro = MESES_ORDER[0] || '';
+  const ultimo = MESES_ORDER[MESES_ORDER.length - 1] || '';
+  document.getElementById('tag-sidebar').textContent =
+    primeiro && ultimo
+      ? `${primeiro.substring(0, 3).toLowerCase()}/${ultimo.substring(0, 3).toLowerCase()} 2026`
+      : '';
 }
 
 // ============================================================
@@ -814,7 +851,7 @@ function renderKPIs() {
 // Log table (com busca e paginação)
 // ============================================================
 function renderLog() {
-  const mesIdx = { Abril: 4, Maio: 5, Junho: 6, Julho: 7, Agosto: 8, Setembro: 9, Outubro: 10 };
+  const mesIdx = MES_IDX;
   let data = filteredData().sort(
     (a, b) =>
       (mesIdx[a.Mes] - mesIdx[b.Mes]) ||
